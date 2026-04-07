@@ -1,0 +1,37 @@
+/* Ballpit Canvas Styles - Include on every page */
+#ballpitCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: auto;
+}
+
+/* Ensure body has proper background for transparency */
+body {
+    background: #0a0a0f;
+}
+
+/* Content should be above ballpit */
+.content-wrapper,
+.auth-container,
+.admin-container,
+.diagnosis-container,
+.symptom-container,
+.inventory-container,
+.d-flex,
+.container,
+main,
+section {
+    position: relative;
+    z-index: 1;
+}
+
+/* Nav should be above everything */
+.pill-nav-container,
+.navbar,
+nav.sidebar {
+    z-index: 1000;
+}

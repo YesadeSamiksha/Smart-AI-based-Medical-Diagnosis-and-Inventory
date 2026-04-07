@@ -11,6 +11,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Ballpit Background -->
+    <link rel="stylesheet" href="ballpit.css">
+    
     <style>
         body {
             background: #0a0a0f;
@@ -166,7 +169,10 @@
     </style>
 </head>
 <body>
-    <div class="inventory-container">
+    <!-- Ballpit Background Canvas -->
+    <canvas id="ballpitCanvas"></canvas>
+    
+    <div class="inventory-container" style="position: relative; z-index: 1;">
         <!-- Back Button -->
         <a href="dashboard.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
             <i class="fas fa-arrow-left"></i>
@@ -307,5 +313,18 @@
         // Initial render
         renderTable(inventoryData);
     </script>
+    
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <!-- Ballpit Animation -->
+    <script type="module" src="ballpit.js"></script>
 </body>
 </html>

@@ -11,6 +11,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Ballpit Background -->
+    <link rel="stylesheet" href="ballpit.css">
+    
     <style>
         body {
             background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
@@ -82,7 +85,10 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Ballpit Background Canvas -->
+    <canvas id="ballpitCanvas"></canvas>
+    
+    <div class="container" style="position: relative; z-index: 1;">
         <div class="row justify-content-center">
             <div class="col-md-12">
                 <div class="text-center mb-4">
@@ -221,5 +227,18 @@
             { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', delay: 0.2 }
         );
     </script>
+    
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <!-- Ballpit Animation -->
+    <script type="module" src="ballpit.js"></script>
 </body>
 </html>

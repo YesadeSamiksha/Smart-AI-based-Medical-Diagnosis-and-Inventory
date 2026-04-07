@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Ballpit Background -->
+    <link rel="stylesheet" href="ballpit.css">
+    
     <style>
         body {
             background: #0a0a0f;
@@ -42,7 +45,10 @@
     </style>
 </head>
 <body>
-    <div class="d-flex">
+    <!-- Ballpit Background Canvas -->
+    <canvas id="ballpitCanvas"></canvas>
+    
+    <div class="d-flex" style="position: relative; z-index: 1;">
         <!-- Sidebar -->
         <nav class="sidebar" style="width: 250px;">
             <div class="text-center mb-4">
@@ -176,5 +182,18 @@
         
         checkAuth();
     </script>
+    
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <!-- Ballpit Animation -->
+    <script type="module" src="ballpit.js"></script>
 </body>
 </html>

@@ -20,6 +20,19 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Ballpit Background -->
+    <link rel="stylesheet" href="ballpit.css">
+    
+    <!-- Three.js Import Map - MUST be in head before any module scripts -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    
     <style>
         body {
             background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
@@ -107,7 +120,10 @@
     </style>
 </head>
 <body>
-    <div class="auth-container">
+    <!-- Ballpit Background Canvas -->
+    <canvas id="ballpitCanvas"></canvas>
+    
+    <div class="auth-container" style="position: relative; z-index: 1;">
         <!-- Logo -->
         <div class="text-center mb-4">
             <a href="index.html" class="text-white text-decoration-none">
@@ -294,5 +310,8 @@
             window.location.href = 'dashboard.html';
         });
     </script>
+    
+    <!-- Ballpit Animation -->
+    <script type="module" src="ballpit.js"></script>
 </body>
 </html>

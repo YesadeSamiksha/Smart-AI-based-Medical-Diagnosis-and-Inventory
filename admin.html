@@ -12,6 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Ballpit Background -->
+    <link rel="stylesheet" href="ballpit.css">
+    
     <style>
         body {
             background: #0a0a0f;
@@ -123,7 +126,10 @@
     </style>
 </head>
 <body>
-    <div class="admin-container">
+    <!-- Ballpit Background Canvas -->
+    <canvas id="ballpitCanvas"></canvas>
+    
+    <div class="admin-container" style="position: relative; z-index: 1;">
         <!-- Header -->
         <div class="flex justify-between items-center mb-8">
             <div>
@@ -329,5 +335,18 @@
             }
         });
     </script>
+    
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <!-- Ballpit Animation -->
+    <script type="module" src="ballpit.js"></script>
 </body>
 </html>
