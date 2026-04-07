@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Checker - MedAI</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        body {
+            background: #0a0a0f;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .symptom-container {
+            max-width: 900px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+        
+        .symptom-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .symptom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .symptom-checkbox {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .symptom-checkbox:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        .symptom-checkbox.selected {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+        }
+        
+        .symptom-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .symptom-category {
+            margin-bottom: 32px;
+        }
+        
+        .category-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #8b5cf6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-analyze {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 24px;
+        }
+        
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+        
+        .btn-analyze:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result-card {
+            margin-top: 30px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            display: none;
+        }
+        
+        .result-card.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .condition-match {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #8b5cf6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .match-score {
+            display: inline-block;
+            background: #8b5cf6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="symptom-container">
+        <!-- Back Button -->
+        <a href="index.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Home</span>
+        </a>
+        
+        <!-- Main Card -->
+        <div class="symptom-card">
+            <div class="text-center mb-8">
+                <i class="fas fa-stethoscope text-6xl text-purple-400 mb-4"></i>
+                <h1 class="text-4xl font-bold mb-2">AI Symptom Checker</h1>
+                <p class="text-gray-400">Select your symptoms for AI-powered condition analysis</p>
+                <div class="mt-4 text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    This is not a replacement for professional medical advice
+                </div>
+            </div>
+            
+            <div id="symptomForm">
+                <!-- General Symptoms -->
+                <div class="symptom-category">
+                    <div class="category-title">
+                        <i class="fas fa-thermometer-half"></i>
+                        General Symptoms
+                    </div>
+                    <div class="symptom-grid">
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="fever" data-category="general">
+                            <span>Fever</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="fatigue" data-category="general">
+                            <span>Fatigue</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="weight-loss" data-category="general">
+                            <span>Weight Loss</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="chills" data-category="general">
+                            <span>Chills</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="night-sweats" data-category="general">
+                            <span>Night Sweats</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Respiratory Symptoms -->
+                <div class="symptom-category">
+                    <div class="category-title">
+                        <i class="fas fa-lungs"></i>
+                        Respiratory Symptoms
+                    </div>
+                    <div class="symptom-grid">
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="cough" data-category="respiratory">
+                            <span>Cough</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="shortness-breath" data-category="respiratory">
+                            <span>Shortness of Breath</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="chest-pain" data-category="respiratory">
+                            <span>Chest Pain</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="wheezing" data-category="respiratory">
+                            <span>Wheezing</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="sore-throat" data-category="respiratory">
+                            <span>Sore Throat</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Digestive Symptoms -->
+                <div class="symptom-category">
+                    <div class="category-title">
+                        <i class="fas fa-stomach"></i>
+                        Digestive Symptoms
+                    </div>
+                    <div class="symptom-grid">
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="nausea" data-category="digestive">
+                            <span>Nausea</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="vomiting" data-category="digestive">
+                            <span>Vomiting</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="diarrhea" data-category="digestive">
+                            <span>Diarrhea</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="abdominal-pain" data-category="digestive">
+                            <span>Abdominal Pain</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="constipation" data-category="digestive">
+                            <span>Constipation</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Neurological Symptoms -->
+                <div class="symptom-category">
+                    <div class="category-title">
+                        <i class="fas fa-brain"></i>
+                        Neurological Symptoms
+                    </div>
+                    <div class="symptom-grid">
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="headache" data-category="neurological">
+                            <span>Headache</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="dizziness" data-category="neurological">
+                            <span>Dizziness</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="confusion" data-category="neurological">
+                            <span>Confusion</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="numbness" data-category="neurological">
+                            <span>Numbness/Tingling</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="vision-changes" data-category="neurological">
+                            <span>Vision Changes</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Cardiovascular Symptoms -->
+                <div class="symptom-category">
+                    <div class="category-title">
+                        <i class="fas fa-heartbeat"></i>
+                        Cardiovascular Symptoms
+                    </div>
+                    <div class="symptom-grid">
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="heart-palpitations" data-category="cardiovascular">
+                            <span>Heart Palpitations</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="irregular-heartbeat" data-category="cardiovascular">
+                            <span>Irregular Heartbeat</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="chest-pressure" data-category="cardiovascular">
+                            <span>Chest Pressure</span>
+                        </label>
+                        <label class="symptom-checkbox">
+                            <input type="checkbox" value="swelling-legs" data-category="cardiovascular">
+                            <span>Leg Swelling</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4 text-gray-400">
+                    <span id="selectedCount">0</span> symptoms selected
+                </div>
+                
+                <button id="analyzeBtn" class="btn-analyze" disabled>
+                    <i class="fas fa-brain mr-2"></i>
+                    Analyze Symptoms
+                </button>
+            </div>
+            
+            <!-- Result Card -->
+            <div id="resultCard" class="result-card">
+                <h3 class="text-2xl font-bold mb-4">Possible Conditions</h3>
+                <div id="conditionsList"></div>
+                
+                <div class="mt-6 p-4 bg-yellow-500 bg-opacity-10 border border-yellow-500 rounded-lg">
+                    <h4 class="font-bold mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Important Notice</h4>
+                    <p class="text-sm text-gray-300">
+                        This analysis is for informational purposes only and should not be used as a substitute 
+                        for professional medical advice, diagnosis, or treatment. Please consult a healthcare 
+                        provider for proper evaluation and diagnosis.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Symptom database with conditions
+        const conditionDatabase = {
+            'Common Cold': {
+                symptoms: ['cough', 'sore-throat', 'fatigue', 'fever'],
+                severity: 'mild'
+            },
+            'Influenza (Flu)': {
+                symptoms: ['fever', 'fatigue', 'cough', 'chills', 'headache'],
+                severity: 'moderate'
+            },
+            'COVID-19': {
+                symptoms: ['fever', 'cough', 'shortness-breath', 'fatigue', 'headache'],
+                severity: 'moderate-severe'
+            },
+            'Pneumonia': {
+                symptoms: ['fever', 'cough', 'shortness-breath', 'chest-pain', 'fatigue'],
+                severity: 'severe'
+            },
+            'Migraine': {
+                symptoms: ['headache', 'nausea', 'vision-changes', 'dizziness'],
+                severity: 'moderate'
+            },
+            'Gastroenteritis': {
+                symptoms: ['nausea', 'vomiting', 'diarrhea', 'abdominal-pain', 'fever'],
+                severity: 'moderate'
+            },
+            'Hypertension': {
+                symptoms: ['headache', 'dizziness', 'chest-pain', 'vision-changes'],
+                severity: 'moderate-severe'
+            },
+            'Asthma': {
+                symptoms: ['shortness-breath', 'wheezing', 'cough', 'chest-pressure'],
+                severity: 'moderate'
+            },
+            'Heart Arrhythmia': {
+                symptoms: ['heart-palpitations', 'irregular-heartbeat', 'dizziness', 'shortness-breath'],
+                severity: 'severe'
+            },
+            'Anxiety Disorder': {
+                symptoms: ['heart-palpitations', 'shortness-breath', 'dizziness', 'chest-pressure'],
+                severity: 'moderate'
+            }
+        };
+        
+        // Track selected symptoms
+        const checkboxes = document.querySelectorAll('.symptom-checkbox input[type="checkbox"]');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const label = this.closest('.symptom-checkbox');
+                if (this.checked) {
+                    label.classList.add('selected');
+                } else {
+                    label.classList.remove('selected');
+                }
+                
+                updateSelectedCount();
+            });
+        });
+        
+        function updateSelectedCount() {
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+            selectedCount.textContent = selected.length;
+            analyzeBtn.disabled = selected.length === 0;
+        }
+        
+        analyzeBtn.addEventListener('click', async function() {
+            // Get selected symptoms
+            const selectedSymptoms = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            // Show loading state
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+            analyzeBtn.disabled = true;
+            
+            // Simulate AI analysis
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Calculate matches
+            const matches = analyzeSymptoms(selectedSymptoms);
+            
+            // Display results
+            displayResults(matches);
+            
+            // Reset button
+            analyzeBtn.innerHTML = '<i class="fas fa-brain mr-2"></i> Analyze Symptoms';
+            analyzeBtn.disabled = false;
+        });
+        
+        function analyzeSymptoms(selectedSymptoms) {
+            const matches = [];
+            
+            for (const [condition, data] of Object.entries(conditionDatabase)) {
+                const matchingSymptoms = data.symptoms.filter(s => selectedSymptoms.includes(s));
+                const matchPercentage = (matchingSymptoms.length / data.symptoms.length) * 100;
+                
+                if (matchPercentage > 0) {
+                    matches.push({
+                        condition,
+                        matchPercentage: Math.round(matchPercentage),
+                        severity: data.severity,
+                        matchingSymptoms: matchingSymptoms.length,
+                        totalSymptoms: data.symptoms.length
+                    });
+                }
+            }
+            
+            // Sort by match percentage
+            return matches.sort((a, b) => b.matchPercentage - a.matchPercentage);
+        }
+        
+        function displayResults(matches) {
+            const resultCard = document.getElementById('resultCard');
+            const conditionsList = document.getElementById('conditionsList');
+            
+            if (matches.length === 0) {
+                conditionsList.innerHTML = '<p class="text-gray-400">No matching conditions found. If symptoms persist, please consult a healthcare provider.</p>';
+            } else {
+                conditionsList.innerHTML = matches.map(match => `
+                    <div class="condition-match">
+                        <div class="match-score">${match.matchPercentage}% Match</div>
+                        <h4 class="font-bold text-lg mb-2">${match.condition}</h4>
+                        <p class="text-gray-400 text-sm mb-2">
+                            ${match.matchingSymptoms} of ${match.totalSymptoms} key symptoms match
+                        </p>
+                        <p class="text-sm">
+                            <span class="font-semibold">Severity:</span> 
+                            <span class="capitalize ${getSeverityColor(match.severity)}">${match.severity}</span>
+                        </p>
+                    </div>
+                `).join('');
+            }
+            
+            resultCard.classList.add('show');
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function getSeverityColor(severity) {
+            if (severity.includes('mild')) return 'text-green-400';
+            if (severity.includes('severe')) return 'text-red-400';
+            return 'text-yellow-400';
+        }
+    </script>
+</body>
+</html>

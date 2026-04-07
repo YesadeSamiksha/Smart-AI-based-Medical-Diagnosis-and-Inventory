@@ -1,0 +1,25 @@
+{
+  "name": "medai-diagnosis-platform",
+  "version": "1.0.0",
+  "description": "Smart AI-based Medical Diagnosis and Inventory Management System",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8080",
+    "dev": "npx live-server --port=8080",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "medical",
+    "diagnosis",
+    "ai",
+    "healthcare",
+    "inventory"
+  ],
+  "author": "MedAI Team",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "live-server": "^1.2.2"
+  }
+}

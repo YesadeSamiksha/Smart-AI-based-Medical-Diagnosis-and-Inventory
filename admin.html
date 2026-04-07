@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MedAI</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        body {
+            background: #0a0a0f;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+        
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .admin-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .admin-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        .stat-big {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            color: #9ca3af;
+            font-size: 16px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .activity-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0 0;
+        }
+        
+        .activity-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .quick-action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .quick-action-btn {
+            padding: 20px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+            transform: translateY(-2px);
+            color: white;
+        }
+        
+        .quick-action-btn i {
+            font-size: 32px;
+            color: #8b5cf6;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">Admin Dashboard</h1>
+                <p class="text-gray-400">Monitor and manage MedAI platform</p>
+            </div>
+            <a href="dashboard.html" class="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-full transition-colors">
+                <i class="fas fa-home"></i>
+                <span>User Dashboard</span>
+            </a>
+        </div>
+        
+        <!-- Stats Grid -->
+        <div class="admin-grid">
+            <div class="admin-card">
+                <div class="stat-big text-blue-400">2,847</div>
+                <div class="stat-label">Total Users</div>
+                <div class="mt-2 text-sm text-green-400">
+                    <i class="fas fa-arrow-up mr-1"></i>+12.5% this month
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <div class="stat-big text-purple-400">15,392</div>
+                <div class="stat-label">Diagnoses Completed</div>
+                <div class="mt-2 text-sm text-green-400">
+                    <i class="fas fa-arrow-up mr-1"></i>+8.3% this week
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <div class="stat-big text-green-400">98.2%</div>
+                <div class="stat-label">System Uptime</div>
+                <div class="mt-2 text-sm text-gray-400">
+                    Last 30 days
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <div class="stat-big text-yellow-400">247</div>
+                <div class="stat-label">Inventory Items</div>
+                <div class="mt-2 text-sm text-red-400">
+                    <i class="fas fa-exclamation-circle mr-1"></i>12 low stock
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts and Activity -->
+        <div class="admin-grid">
+            <!-- Usage Chart -->
+            <div class="admin-card" style="grid-column: span 2;">
+                <h3 class="text-2xl font-bold mb-4">Platform Usage</h3>
+                <div class="chart-container">
+                    <canvas id="usageChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="admin-card">
+                <h3 class="text-2xl font-bold mb-4">Recent Activity</h3>
+                <ul class="activity-list">
+                    <li class="activity-item">
+                        <div class="activity-icon bg-blue-500 bg-opacity-20">
+                            <i class="fas fa-user-plus text-blue-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold">New user registered</div>
+                            <div class="text-sm text-gray-400">2 minutes ago</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-icon bg-green-500 bg-opacity-20">
+                            <i class="fas fa-heartbeat text-green-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold">Diabetes test completed</div>
+                            <div class="text-sm text-gray-400">15 minutes ago</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-icon bg-yellow-500 bg-opacity-20">
+                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold">Low stock alert</div>
+                            <div class="text-sm text-gray-400">1 hour ago</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-icon bg-purple-500 bg-opacity-20">
+                            <i class="fas fa-cog text-purple-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold">System maintenance</div>
+                            <div class="text-sm text-gray-400">3 hours ago</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="admin-card">
+            <h3 class="text-2xl font-bold mb-4">Quick Actions</h3>
+            <div class="quick-action-grid">
+                <a href="inventory.html" class="quick-action-btn">
+                    <i class="fas fa-boxes"></i>
+                    <span>Manage Inventory</span>
+                </a>
+                <a href="#" class="quick-action-btn" onclick="alert('User management coming soon!'); return false;">
+                    <i class="fas fa-users"></i>
+                    <span>User Management</span>
+                </a>
+                <a href="#" class="quick-action-btn" onclick="alert('Reports coming soon!'); return false;">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>View Reports</span>
+                </a>
+                <a href="#" class="quick-action-btn" onclick="alert('Settings coming soon!'); return false;">
+                    <i class="fas fa-cog"></i>
+                    <span>System Settings</span>
+                </a>
+                <a href="#" class="quick-action-btn" onclick="alert('Backup coming soon!'); return false;">
+                    <i class="fas fa-database"></i>
+                    <span>Backup Data</span>
+                </a>
+                <a href="#" class="quick-action-btn" onclick="alert('Logs coming soon!'); return false;">
+                    <i class="fas fa-file-alt"></i>
+                    <span>View Logs</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Check admin authentication
+        const userRole = localStorage.getItem('userRole');
+        
+        if (userRole !== 'admin') {
+            // Not admin, redirect
+            alert('Access denied. Admin privileges required.');
+            window.location.href = 'login-admin.html';
+        }
+        
+        // Display admin info
+        const adminName = localStorage.getItem('userName') || 'Administrator';
+        console.log('Admin logged in:', adminName);
+        
+        // Usage Chart (keep existing chart code)
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Diabetes Tests',
+                    data: [65, 78, 90, 81, 95, 102, 88],
+                    borderColor: '#f9a8d4',
+                    backgroundColor: 'rgba(249, 168, 212, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: 'Lung Scans',
+                    data: [45, 52, 48, 63, 70, 68, 75],
+                    borderColor: '#93c5fd',
+                    backgroundColor: 'rgba(147, 197, 253, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: 'BP Checks',
+                    data: [85, 92, 88, 95, 110, 105, 98],
+                    borderColor: '#fca5a5',
+                    backgroundColor: 'rgba(252, 165, 165, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#9ca3af'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#9ca3af'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

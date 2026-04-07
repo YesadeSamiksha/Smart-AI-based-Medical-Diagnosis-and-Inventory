@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lung Cancer Screening - MedAI</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        body {
+            background: #0a0a0f;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .diagnosis-container {
+            max-width: 800px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+        
+        .diagnosis-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .form-select option {
+            background: #1a1a24;
+            color: #ffffff;
+        }
+        
+        .btn-diagnose {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-diagnose:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+        }
+        
+        .result-card {
+            margin-top: 30px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            display: none;
+        }
+        
+        .result-card.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .risk-level {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        
+        .risk-low { color: #10b981; }
+        .risk-medium { color: #f59e0b; }
+        .risk-high { color: #ef4444; }
+        
+        .file-upload {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .file-upload input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="diagnosis-container">
+        <!-- Back Button -->
+        <a href="index.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Home</span>
+        </a>
+        
+        <!-- Main Card -->
+        <div class="diagnosis-card">
+            <div class="text-center mb-8">
+                <i class="fas fa-lungs text-6xl text-blue-400 mb-4"></i>
+                <h1 class="text-4xl font-bold mb-2">Lung Cancer Risk Assessment</h1>
+                <p class="text-gray-400">Upload CT scan or fill health questionnaire for AI-powered screening</p>
+            </div>
+            
+            <form id="lungForm">
+                <!-- CT Scan Upload -->
+                <div class="form-group">
+                    <label class="form-label">CT Scan Upload (Optional)</label>
+                    <div class="file-upload" onclick="document.getElementById('ctScan').click()">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-blue-400 mb-3"></i>
+                        <p class="mb-0">Click to upload CT scan image</p>
+                        <small class="text-gray-500">(DICOM, JPG, PNG formats supported)</small>
+                        <input type="file" id="ctScan" accept=".dcm,.jpg,.jpeg,.png">
+                    </div>
+                    <div id="fileName" class="text-sm text-gray-400 mt-2"></div>
+                </div>
+                
+                <div class="text-center my-4 text-gray-500">
+                    <span>— OR Fill Questionnaire —</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="age">Age (years)</label>
+                    <input type="number" id="age" class="form-input" placeholder="e.g., 55" min="1" max="120" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="smokingHistory">Smoking History</label>
+                    <select id="smokingHistory" class="form-select" required>
+                        <option value="">Select...</option>
+                        <option value="never">Never Smoked</option>
+                        <option value="former">Former Smoker</option>
+                        <option value="current">Current Smoker</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="packYears">Pack Years (if applicable)</label>
+                    <input type="number" id="packYears" class="form-input" placeholder="e.g., 20" min="0" max="200">
+                    <small class="text-gray-500">(Packs per day × years smoked)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="chronicCough">Persistent Cough?</label>
+                    <select id="chronicCough" class="form-select" required>
+                        <option value="">Select...</option>
+                        <option value="no">No</option>
+                        <option value="yes">Yes, for less than 3 weeks</option>
+                        <option value="chronic">Yes, for more than 3 weeks</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="chestPain">Chest Pain?</label>
+                    <select id="chestPain" class="form-select" required>
+                        <option value="">Select...</option>
+                        <option value="no">No</option>
+                        <option value="occasional">Occasional</option>
+                        <option value="frequent">Frequent</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="breathShortness">Shortness of Breath?</label>
+                    <select id="breathShortness" class="form-select" required>
+                        <option value="">Select...</option>
+                        <option value="no">No</option>
+                        <option value="exertion">Only during exertion</option>
+                        <option value="rest">Even at rest</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="weightLoss">Unexplained Weight Loss?</label>
+                    <select id="weightLoss" class="form-select" required>
+                        <option value="">Select...</option>
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="familyHistory">Family History of Lung Cancer?</label>
+                    <select id="familyHistory" class="form-select" required>
+                        <option value="">Select...</option>
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-diagnose">
+                    <i class="fas fa-brain mr-2"></i>
+                    Analyze Risk
+                </button>
+            </form>
+            
+            <!-- Result Card -->
+            <div id="resultCard" class="result-card">
+                <h3 class="text-2xl font-bold mb-4">Screening Results</h3>
+                <div id="riskLevel" class="risk-level"></div>
+                <div id="riskDescription" class="text-gray-300 mb-4"></div>
+                <div id="recommendations" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // File upload handling
+        document.getElementById('ctScan').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                document.getElementById('fileName').innerHTML = `<i class="fas fa-file-image mr-2"></i>Selected: ${fileName}`;
+            }
+        });
+        
+        document.getElementById('lungForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Collect form data
+            const formData = {
+                age: parseInt(document.getElementById('age').value),
+                smokingHistory: document.getElementById('smokingHistory').value,
+                packYears: parseInt(document.getElementById('packYears').value) || 0,
+                chronicCough: document.getElementById('chronicCough').value,
+                chestPain: document.getElementById('chestPain').value,
+                breathShortness: document.getElementById('breathShortness').value,
+                weightLoss: document.getElementById('weightLoss').value,
+                familyHistory: document.getElementById('familyHistory').value,
+                hasCTScan: document.getElementById('ctScan').files.length > 0
+            };
+            
+            // Show loading state
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+            btn.disabled = true;
+            
+            // Simulate AI analysis
+            await new Promise(resolve => setTimeout(resolve, 2500));
+            
+            // Calculate risk
+            const riskScore = calculateLungCancerRisk(formData);
+            
+            // Display results
+            displayResults(riskScore, formData);
+            
+            // Reset button
+            btn.innerHTML = '<i class="fas fa-brain mr-2"></i> Analyze Risk';
+            btn.disabled = false;
+        });
+        
+        function calculateLungCancerRisk(data) {
+            let score = 0;
+            
+            // Age risk
+            if (data.age > 65) score += 3;
+            else if (data.age > 55) score += 2;
+            else if (data.age > 40) score += 1;
+            
+            // Smoking history
+            if (data.smokingHistory === 'current') score += 4;
+            else if (data.smokingHistory === 'former') score += 2;
+            
+            // Pack years
+            if (data.packYears > 30) score += 3;
+            else if (data.packYears > 15) score += 2;
+            else if (data.packYears > 0) score += 1;
+            
+            // Symptoms
+            if (data.chronicCough === 'chronic') score += 3;
+            else if (data.chronicCough === 'yes') score += 1;
+            
+            if (data.chestPain === 'frequent') score += 2;
+            else if (data.chestPain === 'occasional') score += 1;
+            
+            if (data.breathShortness === 'rest') score += 3;
+            else if (data.breathShortness === 'exertion') score += 1;
+            
+            if (data.weightLoss === 'yes') score += 2;
+            if (data.familyHistory === 'yes') score += 2;
+            
+            return score;
+        }
+        
+        function displayResults(score, data) {
+            const resultCard = document.getElementById('resultCard');
+            const riskLevel = document.getElementById('riskLevel');
+            const riskDescription = document.getElementById('riskDescription');
+            const recommendations = document.getElementById('recommendations');
+            
+            let level, description, recs, className;
+            
+            if (score >= 12) {
+                level = 'High Risk';
+                className = 'risk-high';
+                description = 'Your screening indicates several risk factors that warrant immediate medical attention.';
+                recs = `
+                    <div class="bg-red-500 bg-opacity-10 border border-red-500 rounded-lg p-4">
+                        <h4 class="font-bold mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Urgent Action Required</h4>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Schedule an appointment with a pulmonologist immediately</li>
+                            <li>Get a low-dose CT scan for proper diagnosis</li>
+                            <li>If you smoke, seek cessation support NOW</li>
+                            <li>Consider genetic counseling if family history present</li>
+                            <li>Document all symptoms with dates and severity</li>
+                        </ul>
+                    </div>
+                `;
+            } else if (score >= 6) {
+                level = 'Moderate Risk';
+                className = 'risk-medium';
+                description = 'You have some risk factors that should be monitored closely.';
+                recs = `
+                    <div class="bg-yellow-500 bg-opacity-10 border border-yellow-500 rounded-lg p-4">
+                        <h4 class="font-bold mb-2"><i class="fas fa-lightbulb mr-2"></i>Recommended Actions</h4>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Consult with your doctor about low-dose CT screening</li>
+                            <li>If you smoke, make a plan to quit</li>
+                            <li>Annual chest X-rays may be recommended</li>
+                            <li>Monitor for new or worsening symptoms</li>
+                            <li>Consider lung health supplements (ask your doctor)</li>
+                        </ul>
+                    </div>
+                `;
+            } else {
+                level = 'Low Risk';
+                className = 'risk-low';
+                description = 'Your current risk factors are minimal. Continue healthy habits!';
+                recs = `
+                    <div class="bg-green-500 bg-opacity-10 border border-green-500 rounded-lg p-4">
+                        <h4 class="font-bold mb-2"><i class="fas fa-check-circle mr-2"></i>Preventive Care</h4>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Maintain smoke-free environment</li>
+                            <li>Avoid secondhand smoke exposure</li>
+                            <li>Regular exercise for lung health</li>
+                            <li>Annual health check-ups</li>
+                            <li>Be aware of radon and air quality at home</li>
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            riskLevel.textContent = level;
+            riskLevel.className = `risk-level ${className}`;
+            riskDescription.textContent = description;
+            recommendations.innerHTML = recs;
+            
+            resultCard.classList.add('show');
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>

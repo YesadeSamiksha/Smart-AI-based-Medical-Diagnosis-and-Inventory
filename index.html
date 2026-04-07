@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI - AI-Powered Medical Diagnosis</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        /* Pill Navigation Styles */
+        .pill-nav-container {
+            position: fixed;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            pointer-events: auto;
+        }
+        
+        .pill-nav {
+            --nav-h: 48px;
+            --pill-pad-x: 20px;
+            --pill-gap: 4px;
+            --base: #ffffff;
+            --pill-bg: #0a0a0f;
+            --hover-text: #0a0a0f;
+            --pill-text: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .pill-logo {
+            width: var(--nav-h);
+            height: var(--nav-h);
+            border-radius: 50%;
+            background: var(--base);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #6366f1;
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .pill-logo:hover {
+            transform: scale(1.05);
+        }
+        
+        .pill-nav-items {
+            display: flex;
+            align-items: center;
+            height: var(--nav-h);
+            background: var(--base);
+            border-radius: 9999px;
+            padding: 4px;
+        }
+        
+        .pill-list {
+            list-style: none;
+            display: flex;
+            align-items: stretch;
+            gap: var(--pill-gap);
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        
+        .pill-list > li {
+            display: flex;
+            height: 100%;
+        }
+        
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 var(--pill-pad-x);
+            background: var(--pill-bg);
+            color: var(--pill-text);
+            text-decoration: none;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pill .hover-circle {
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            border-radius: 50%;
+            background: var(--base);
+            z-index: 1;
+            display: block;
+            pointer-events: none;
+            will-change: transform;
+        }
+        
+        .pill .label-stack {
+            position: relative;
+            display: inline-block;
+            line-height: 1;
+            z-index: 2;
+        }
+        
+        .pill .pill-label {
+            position: relative;
+            z-index: 2;
+            display: inline-block;
+            line-height: 1;
+            will-change: transform;
+        }
+        
+        .pill .pill-label-hover {
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--hover-text);
+            z-index: 3;
+            display: inline-block;
+            will-change: transform, opacity;
+        }
+        
+        .pill.is-active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            background: var(--base);
+            border-radius: 50%;
+            z-index: 4;
+        }
+        
+        /* Auth buttons in pill style */
+        .pill-auth {
+            display: flex;
+            align-items: center;
+            height: var(--nav-h);
+            background: var(--base);
+            border-radius: 9999px;
+            padding: 4px;
+            gap: var(--pill-gap);
+        }
+        
+        .pill-auth .pill {
+            font-size: 13px;
+        }
+        
+        .pill-auth .pill.signup {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        
+        /* Mobile menu */
+        .mobile-menu-btn {
+            display: none;
+            width: var(--nav-h);
+            height: var(--nav-h);
+            border-radius: 50%;
+            background: var(--base);
+            border: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        .hamburger-line {
+            width: 18px;
+            height: 2px;
+            background: var(--pill-bg);
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-menu {
+            position: absolute;
+            top: calc(var(--nav-h) + 1rem);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--base);
+            border-radius: 24px;
+            padding: 6px;
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .mobile-menu.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .mobile-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .mobile-menu a {
+            display: block;
+            padding: 12px 20px;
+            background: var(--pill-bg);
+            color: var(--pill-text);
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-menu a:hover {
+            background: var(--base);
+            color: var(--pill-bg);
+        }
+        
+        .mobile-menu a.signup {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        
+        @media (max-width: 900px) {
+            .pill-nav-items, .pill-auth {
+                display: none;
+            }
+            .mobile-menu-btn {
+                display: flex;
+            }
+        }
+        
+        /* Spotlight Card Effect */
+        .spotlight-card {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .spotlight-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                var(--spotlight-color, rgba(99, 102, 241, 0.15)),
+                transparent 40%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .spotlight-card:hover::before {
+            opacity: 1;
+        }
+        
+        .spotlight-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .spotlight-card .card-body {
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* Feature card variants */
+        .spotlight-card.diabetes-card {
+            --spotlight-color: rgba(249, 168, 212, 0.2);
+        }
+        
+        .spotlight-card.lung-card {
+            --spotlight-color: rgba(147, 197, 253, 0.2);
+        }
+        
+        .spotlight-card.bp-card {
+            --spotlight-color: rgba(252, 165, 165, 0.2);
+        }
+        
+        /* Contact form spotlight */
+        .spotlight-form {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .spotlight-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                rgba(139, 92, 246, 0.15),
+                transparent 40%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .spotlight-form:hover::before {
+            opacity: 1;
+        }
+        
+        .spotlight-form > * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Disclaimer card spotlight */
+        .spotlight-disclaimer {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .spotlight-disclaimer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                rgba(168, 85, 247, 0.15),
+                transparent 40%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .spotlight-disclaimer:hover::before {
+            opacity: 1;
+        }
+        
+        .spotlight-disclaimer > * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 3D Button Effect */
+        .btn-3d {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            outline: none;
+            border: 0;
+            vertical-align: middle;
+            text-decoration: none;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            color: #ffffff;
+            text-transform: none;
+            padding: 0.875em 1.75em;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: 2px solid #6366f1;
+            border-radius: 9999px;
+            transform-style: preserve-3d;
+            transition: transform 150ms cubic-bezier(0, 0, 0.58, 1), background 150ms cubic-bezier(0, 0, 0.58, 1);
+        }
+        
+        .btn-3d::before {
+            position: absolute;
+            content: '';
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: inherit;
+            box-shadow: 0 0 0 2px #4f46e5, 0 0.5em 0 0 rgba(79, 70, 229, 0.4);
+            transform: translate3d(0, 0.6em, -1em);
+            transition: transform 150ms cubic-bezier(0, 0, 0.58, 1), box-shadow 150ms cubic-bezier(0, 0, 0.58, 1);
+        }
+        
+        .btn-3d:hover {
+            background: linear-gradient(135deg, #818cf8, #a78bfa);
+            transform: translate(0, 0.2em);
+        }
+        
+        .btn-3d:hover::before {
+            box-shadow: 0 0 0 2px #4f46e5, 0 0.35em 0 0 rgba(79, 70, 229, 0.4);
+            transform: translate3d(0, 0.4em, -1em);
+        }
+        
+        .btn-3d:active {
+            background: linear-gradient(135deg, #818cf8, #a78bfa);
+            transform: translate(0em, 0.6em);
+        }
+        
+        .btn-3d:active::before {
+            box-shadow: 0 0 0 2px #4f46e5, 0 0 rgba(79, 70, 229, 0.4);
+            transform: translate3d(0, 0, -1em);
+        }
+        
+        /* Small 3D Button */
+        .btn-3d-sm {
+            font-size: 13px;
+            padding: 0.6em 1.25em;
+        }
+        
+        .btn-3d-sm::before {
+            box-shadow: 0 0 0 2px #4f46e5, 0 0.4em 0 0 rgba(79, 70, 229, 0.4);
+            transform: translate3d(0, 0.5em, -1em);
+        }
+        
+        .btn-3d-sm:hover::before {
+            box-shadow: 0 0 0 2px #4f46e5, 0 0.25em 0 0 rgba(79, 70, 229, 0.4);
+            transform: translate3d(0, 0.3em, -1em);
+        }
+        
+        .btn-3d-sm:active::before {
+            box-shadow: 0 0 0 2px #4f46e5, 0 0 rgba(79, 70, 229, 0.4);
+            transform: translate3d(0, 0, -1em);
+        }
+    </style>
+</head>
+<body>
+    <!-- Pill Navigation Bar -->
+    <div class="pill-nav-container">
+        <nav class="pill-nav" id="pillNav">
+            <!-- Logo -->
+            <a href="#home" class="pill-logo" id="pillLogo">
+                <i class="fas fa-heartbeat"></i>
+            </a>
+            
+            <!-- Nav Items -->
+            <div class="pill-nav-items" id="navItems">
+                <ul class="pill-list">
+                    <li>
+                        <a href="#home" class="pill is-active" data-index="0">
+                            <span class="hover-circle"></span>
+                            <span class="label-stack">
+                                <span class="pill-label">Home</span>
+                                <span class="pill-label-hover">Home</span>
+                            </span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#features" class="pill" data-index="1">
+                            <span class="hover-circle"></span>
+                            <span class="label-stack">
+                                <span class="pill-label">Features</span>
+                                <span class="pill-label-hover">Features</span>
+                            </span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#about" class="pill" data-index="2">
+                            <span class="hover-circle"></span>
+                            <span class="label-stack">
+                                <span class="pill-label">About</span>
+                                <span class="pill-label-hover">About</span>
+                            </span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#contact" class="pill" data-index="3">
+                            <span class="hover-circle"></span>
+                            <span class="label-stack">
+                                <span class="pill-label">Contact</span>
+                                <span class="pill-label-hover">Contact</span>
+                            </span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Auth Buttons -->
+            <div class="pill-auth">
+                <button id="theme-toggle" class="pill">
+                    <i class="fas fa-sun"></i>
+                </button>
+                <a href="login.html" class="pill" data-index="4">
+                    <span class="hover-circle"></span>
+                    <span class="label-stack">
+                        <span class="pill-label">Login</span>
+                        <span class="pill-label-hover">Login</span>
+                    </span>
+                </a>
+                <a href="login.html#signup" class="pill signup">Sign Up</a>
+            </div>
+            
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </nav>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-menu" id="mobileMenu">
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="login.html#signup" class="signup">Sign Up</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Hero Section with Ballpit Background -->
+    <section id="home" style="position: relative; overflow: hidden; min-height: 100vh; background: #0a0a0f;">
+        <!-- Ballpit Canvas Background -->
+        <canvas id="ballpitCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></canvas>
+        
+        <!-- Hero Content -->
+        <div style="position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; pointer-events: none;" class="text-white">
+            <div class="container mx-auto text-center px-4">
+                <span style="pointer-events: auto;" class="inline-block px-4 py-2 rounded-full bg-gray-800 text-gray-300 text-sm mb-6">
+                    <i class="fas fa-brain mr-2"></i> AI-Powered Health Assessment
+                </span>
+                <h1 class="text-5xl md:text-6xl font-bold mb-4">
+                    Smart Medical<br>
+                    <span style="background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Diagnosis</span>
+                </h1>
+                <p class="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+                    Get instant AI-powered health assessments for diabetes, lung cancer, and blood pressure. 
+                    Accurate, fast, and accessible healthcare guidance.
+                </p>
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <a href="login.html" class="inline-block px-6 py-3 rounded-full bg-purple-600 hover:bg-purple-700 transition-colors duration-300 font-semibold" style="pointer-events: auto;">Get Started</a>
+                    <button id="voice-control-btn" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors duration-300 font-semibold" style="pointer-events: auto;">
+                        <i class="fas fa-microphone"></i>
+                        <span>Use Voice Control</span>
+                    </button>
+                </div>
+                <div class="mt-12 flex gap-8 justify-center flex-wrap text-gray-500" style="pointer-events: auto;">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-eye-slash text-purple-400"></i>
+                        <span>Color Blind Support</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-route text-purple-400"></i>
+                        <span>Voice Navigation</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-robot text-purple-400"></i>
+                        <span>AI Assistant</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-palette text-purple-400"></i>
+                        <span>Color Identification</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Floating Action Buttons -->
+    <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-3">
+        <button id="voice-assistant-btn" class="w-14 h-14 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center shadow-lg">
+            <i class="fas fa-microphone-alt text-2xl"></i>
+        </button>
+        <button id="ai-assistant-btn" class="w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-700 text-white flex items-center justify-center shadow-lg">
+            <i class="fas fa-robot text-2xl"></i>
+        </button>
+    </div>
+
+    <!-- AI Assistant Chat Window -->
+    <div id="ai-chat-window" class="fixed bottom-20 right-4 z-50 w-80 bg-gray-800/80 backdrop-blur-md rounded-lg shadow-xl text-white p-4 hidden">
+        <div id="ai-chat-messages" class="h-64 overflow-y-auto mb-3"></div>
+        <p id="ai-chat-status" class="text-sm text-gray-400">Listening...</p>
+    </div>
+
+    <!-- Features Section -->
+    <section id="features" class="py-5" style="background: #0f0f14;">
+        <div class="container">
+            <h2 class="text-center mb-2 text-white">Our Diagnosis Services</h2>
+            <p class="text-center text-gray-400 mb-5">AI-powered health assessments for early detection and prevention</p>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm spotlight-card diabetes-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; --mouse-x: 50%; --mouse-y: 50%;">
+                        <div class="card-body text-center text-white p-4">
+                            <div class="feature-icon mb-3" style="font-size: 3rem; color: #f9a8d4;">
+                                <i class="fas fa-tint"></i>
+                            </div>
+                            <h5 class="card-title">Diabetes Assessment</h5>
+                            <p class="card-text text-gray-400">Evaluate your diabetes risk based on lifestyle, symptoms, and medical history with 94% accuracy.</p>
+                            <a href="login.html" class="btn-3d btn-3d-sm mt-3">Start Assessment</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm spotlight-card lung-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; --mouse-x: 50%; --mouse-y: 50%;">
+                        <div class="card-body text-center text-white p-4">
+                            <div class="feature-icon mb-3" style="font-size: 3rem; color: #93c5fd;">
+                                <i class="fas fa-lungs"></i>
+                            </div>
+                            <h5 class="card-title">Lung Cancer Screening</h5>
+                            <p class="card-text text-gray-400">Screen for early signs of lung cancer based on risk factors, symptoms, and lifestyle habits.</p>
+                            <a href="login.html" class="btn-3d btn-3d-sm mt-3">Start Screening</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm spotlight-card bp-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; --mouse-x: 50%; --mouse-y: 50%;">
+                        <div class="card-body text-center text-white p-4">
+                            <div class="feature-icon mb-3" style="font-size: 3rem; color: #fca5a5;">
+                                <i class="fas fa-heart-pulse"></i>
+                            </div>
+                            <h5 class="card-title">Blood Pressure Analysis</h5>
+                            <p class="card-text text-gray-400">Analyze your blood pressure levels and get personalized recommendations for management.</p>
+                            <a href="login.html" class="btn-3d btn-3d-sm mt-3">Start Analysis</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-16" style="background: #0a0a0f;">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto">
+                <div class="row align-items-center">
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <h2 class="text-3xl font-bold mb-4 text-white">About MedAI</h2>
+                        <p class="text-gray-400 mb-4">
+                            MedAI is an AI-powered medical diagnosis platform designed to provide quick, accurate health assessments. 
+                            Our machine learning models are trained on extensive medical data to help identify potential health risks early.
+                        </p>
+                        <p class="text-gray-400 mb-4">
+                            We believe everyone deserves access to quality healthcare guidance. Our platform offers preliminary screenings 
+                            for diabetes, lung cancer, and blood pressure conditions.
+                        </p>
+                        <div class="d-flex gap-4 flex-wrap">
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-purple-400">50K+</div>
+                                <div class="text-gray-500 text-sm">Assessments</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-blue-400">94%</div>
+                                <div class="text-gray-500 text-sm">Accuracy</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-green-400">3</div>
+                                <div class="text-gray-500 text-sm">Conditions</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-3 spotlight-disclaimer" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); --mouse-x: 50%; --mouse-y: 50%;">
+                            <h5 class="text-white mb-3"><i class="fas fa-shield-alt text-purple-400 me-2"></i> Important Disclaimer</h5>
+                            <p class="text-gray-400 text-sm mb-0">
+                                MedAI provides preliminary health assessments and should not replace professional medical advice. 
+                                Always consult a qualified healthcare provider for proper diagnosis and treatment. Our AI assists 
+                                in early detection but final medical decisions should be made by licensed physicians.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-5" style="background: #0f0f14;">
+        <div class="container">
+            <h2 class="text-center mb-2 text-white">Contact Us</h2>
+            <p class="text-center text-gray-400 mb-5">Have questions? We're here to help</p>
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <form id="contactForm" class="spotlight-form" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2rem; --mouse-x: 50%; --mouse-y: 50%;">
+                        <div class="mb-3">
+                            <label for="name" class="form-label text-gray-300">Name</label>
+                            <input type="text" class="form-control" id="name" required style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;">
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label text-gray-300">Email</label>
+                            <input type="email" class="form-control" id="email" required style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;">
+                        </div>
+                        <div class="mb-3">
+                            <label for="message" class="form-label text-gray-300">Message</label>
+                            <textarea class="form-control" id="message" rows="4" required style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;"></textarea>
+                        </div>
+                        <button type="submit" class="btn-3d w-100" style="width: 100%;">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: #0a0a0f; border-top: 1px solid rgba(255,255,255,0.1);" class="text-white py-8">
+        <div class="container mx-auto text-center px-4">
+            <div class="mb-4">
+                <span class="font-bold text-xl">
+                    <i class="fas fa-heartbeat text-purple-400 me-2"></i>MedAI
+                </span>
+            </div>
+            <p class="text-gray-500 mb-4">&copy; 2026 MedAI. All rights reserved. Not a substitute for professional medical advice.</p>
+            <div class="flex justify-center gap-4">
+                <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook fa-lg"></i></a>
+                <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter fa-lg"></i></a>
+                <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin fa-lg"></i></a>
+                <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-github fa-lg"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="src/script.js"></script>
+    
+    <!-- Three.js from CDN -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <!-- Ballpit Animation -->
+    <script type="module" src="src/ballpit.js"></script>
+    
+    <!-- Pill Navigation Animation Script -->
+    <script src="src/pill-nav.js"></script>
+    
+    <!-- Spotlight Card Effect JavaScript -->
+    <script src="src/spotlight.js"></script>
+</body>
+</html>
