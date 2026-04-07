@@ -1,0 +1,1 @@
+# Smart-AI-based-Medical-Diagnosis-and-Inventory
