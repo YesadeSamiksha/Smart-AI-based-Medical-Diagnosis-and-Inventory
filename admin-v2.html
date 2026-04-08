@@ -23,6 +23,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="trends-analysis.js"></script>
     
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="ballpit.css">
@@ -891,6 +892,38 @@
             </div>
 
             <!-- Charts Row -->
+            <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
+                <div class="admin-card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-disease mr-2 text-red-400"></i>Most Common Conditions (Real Data)</h3>
+                    <div class="chart-container" style="height:280px;">
+                        <div id="commonConditionsChart"></div>
+                    </div>
+                </div>
+                <div class="admin-card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-list mr-2 text-purple-400"></i>Top Conditions Breakdown</h3>
+                    <div id="commonConditionsList" style="max-height: 280px; overflow-y: auto;">
+                        <p class="text-gray-400 text-sm text-center py-4">Loading condition data from database...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Condition Trends & Risk Analysis -->
+            <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
+                <div class="admin-card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Condition Trends Over Time</h3>
+                    <div class="chart-container" style="height:220px;">
+                        <div id="conditionTrendChart"></div>
+                    </div>
+                </div>
+                <div class="admin-card">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>Risk Distribution by Condition</h3>
+                    <div class="chart-container" style="height:220px;">
+                        <div id="conditionRiskChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disease Type Distribution (Original) -->
             <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-disease mr-2 text-red-400"></i>Disease Type Distribution</h3>
@@ -2313,9 +2346,78 @@
         // ===== TRENDS & MEDICINE PREDICTION =====
         let trendDiseaseChart = null, trendMonthlyChart = null, trendRiskChart = null, trendActivityChart = null;
         
+        // Load Most Common Conditions from Database
+        async function loadCommonConditions() {
+            try {
+                const response = await fetch(`${API_URL}/admin/common-conditions?limit=10`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (!response.ok) {
+                    console.warn('Failed to load common conditions:', response.status);
+                    return null;
+                }
+                
+                const data = await response.json();
+                console.log('✅ Common conditions loaded:', data);
+                return data;
+            } catch (error) {
+                console.error('Error loading common conditions:', error);
+                return null;
+            }
+        }
+        
+        // Load Condition Trends
+        async function loadConditionTrends() {
+            try {
+                const response = await fetch(`${API_URL}/admin/condition-trends`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (!response.ok) {
+                    console.warn('Failed to load condition trends:', response.status);
+                    return null;
+                }
+                
+                const data = await response.json();
+                console.log('✅ Condition trends loaded:', data);
+                return data;
+            } catch (error) {
+                console.error('Error loading condition trends:', error);
+                return null;
+            }
+        }
+        
+        // Load Risk Analysis
+        async function loadRiskAnalysis() {
+            try {
+                const response = await fetch(`${API_URL}/admin/risk-analysis`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                if (!response.ok) {
+                    console.warn('Failed to load risk analysis:', response.status);
+                    return null;
+                }
+                
+                const data = await response.json();
+                console.log('✅ Risk analysis loaded:', data);
+                return data;
+            } catch (error) {
+                console.error('Error loading risk analysis:', error);
+                return null;
+            }
+        }
+        
         async function loadTrendsData() {
             console.log('📈 Loading trends and prediction data...');
             try {
+                // First, try to load real condition analysis data
+                const conditionData = await loadCommonConditionsFromDB(10);
+                const trendData = await loadConditionTrendsFromDB();
+                const riskData = await loadRiskAnalysisFromDB();
+                
+                // Then load traditional trends from Supabase
                 const supabase = window.MedAISupabase?.getSupabase();
                 let diagnoses = [], orders = [], activities = [];
                 
@@ -2351,9 +2453,202 @@
                 
                 analyzeTrendsAndRender(diagnoses, orders, activities);
                 
+                // Display real condition analysis if available
+                if (conditionData) {
+                    displayCommonConditions(conditionData);
+                }
+                if (trendData) {
+                    displayConditionTrends(trendData);
+                }
+                if (riskData) {
+                    displayRiskAnalysis(riskData);
+                }
+                
             } catch (err) {
                 console.warn('⚠️ Trends: using mock data:', err.message);
                 analyzeTrendsAndRender(generateMockDiagnoses(), [], []);
+            }
+        }
+        
+        // Display common conditions data
+        function displayCommonConditions(data) {
+            if (!data || !data.data || !data.data.most_common) return;
+            
+            // Update KPI card if available
+            if (data.data.most_common[0]) {
+                const topCondition = data.data.most_common[0];
+                const el = document.getElementById('trend-dominant-disease');
+                if (el) el.textContent = topCondition.condition;
+            }
+            
+            // Display conditions list
+            const listEl = document.getElementById('commonConditionsList');
+            if (listEl) {
+                listEl.innerHTML = TrendsAnalysis.formatConditionDisplay(data);
+            }
+            
+            // Display chart
+            const chartEl = document.getElementById('commonConditionsChart');
+            if (chartEl) {
+                chartEl.innerHTML = '';
+                try {
+                    const conditions = data.data.most_common.slice(0, 10);
+                    const labels = conditions.map(c => c.condition);
+                    const values = conditions.map(c => c.count);
+                    const colors = conditions.map(c => {
+                        switch(c.prevalence) {
+                            case 'High': return 'rgba(239, 68, 68, 0.8)';
+                            case 'Medium': return 'rgba(245, 158, 11, 0.8)';
+                            default: return 'rgba(16, 185, 129, 0.8)';
+                        }
+                    });
+                    
+                    const canvas = document.createElement('canvas');
+                    chartEl.appendChild(canvas);
+                    
+                    new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Number of Cases',
+                                data: values,
+                                backgroundColor: colors,
+                                borderColor: '#1e293b',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                                },
+                                y: {
+                                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.warn('Error creating conditions chart:', e);
+                }
+            }
+        }
+        
+        // Display condition trends
+        function displayConditionTrends(data) {
+            if (!data || !data.trends || data.trends.length === 0) return;
+            
+            const chartEl = document.getElementById('conditionTrendChart');
+            if (!chartEl) return;
+            
+            chartEl.innerHTML = '';
+            try {
+                const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+                const datasets = [];
+                
+                data.trends.slice(0, 5).forEach((trend, index) => {
+                    const values = trend.trend.map(t => t.count);
+                    datasets.push({
+                        label: trend.condition,
+                        data: values,
+                        borderColor: colors[index % colors.length],
+                        backgroundColor: `${colors[index % colors.length]}20`,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: colors[index % colors.length]
+                    });
+                });
+                
+                const canvas = document.createElement('canvas');
+                chartEl.appendChild(canvas);
+                
+                new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({length: 10}, (_, i) => `Period ${i+1}`),
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#d1d5db' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#9ca3af' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#9ca3af' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('Error creating trends chart:', e);
+            }
+        }
+        
+        // Display risk analysis
+        function displayRiskAnalysis(data) {
+            if (!data || !data.risk_by_condition || data.risk_by_condition.length === 0) return;
+            
+            const chartEl = document.getElementById('conditionRiskChart');
+            if (!chartEl) return;
+            
+            chartEl.innerHTML = '';
+            try {
+                const topCondition = data.risk_by_condition[0];
+                const canvas = document.createElement('canvas');
+                chartEl.appendChild(canvas);
+                
+                new Chart(canvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical'],
+                        datasets: [{
+                            data: [
+                                topCondition.risk_distribution.low,
+                                topCondition.risk_distribution.medium,
+                                topCondition.risk_distribution.high,
+                                topCondition.risk_distribution.critical
+                            ],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(139, 92, 246, 0.8)'
+                            ],
+                            borderColor: '#1e293b',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#d1d5db' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('Error creating risk chart:', e);
             }
         }
         

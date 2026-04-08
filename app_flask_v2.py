@@ -629,6 +629,285 @@ def user_trends(user_id):
     return jsonify(calculate_trends(user_id))
 
 # ==================================================
+# API Routes - Common Conditions Analysis
+# ==================================================
+def extract_conditions_from_diagnosis(diagnosis_result):
+    """Extract condition names from diagnosis result data."""
+    conditions = []
+    
+    if isinstance(diagnosis_result, dict):
+        # Extract from primary_conditions
+        if 'primary_conditions' in diagnosis_result:
+            for cond in diagnosis_result['primary_conditions']:
+                if isinstance(cond, dict):
+                    conditions.append(cond.get('name', ''))
+                else:
+                    conditions.append(str(cond))
+        
+        # Extract from result_data if it contains condition info
+        if 'result_data' in diagnosis_result:
+            result_data = diagnosis_result['result_data']
+            if isinstance(result_data, str):
+                try:
+                    result_data = json.loads(result_data)
+                except:
+                    pass
+            
+            if isinstance(result_data, dict):
+                if 'primary_conditions' in result_data:
+                    for cond in result_data['primary_conditions']:
+                        if isinstance(cond, dict):
+                            conditions.append(cond.get('name', ''))
+                        else:
+                            conditions.append(str(cond))
+                
+                # For specific diagnosis types
+                if 'prediction' in result_data:
+                    conditions.append(result_data['prediction'])
+                if 'name' in result_data:
+                    conditions.append(result_data['name'])
+    
+    # Filter out empty strings
+    return [c.strip() for c in conditions if c and c.strip()]
+
+def analyze_common_conditions(limit=10, diagnosis_type=None):
+    """Analyze most common conditions from all user data."""
+    stats = get_all_stats()
+    diagnoses = stats.get('diagnoses', [])
+    
+    if not diagnoses:
+        return {
+            'success': False,
+            'message': 'No diagnosis data available',
+            'data': {
+                'most_common': [],
+                'total_conditions_tracked': 0,
+                'conditions_count': 0,
+                'data_points': 0
+            }
+        }
+    
+    # Filter by diagnosis type if specified
+    if diagnosis_type:
+        diagnoses = [d for d in diagnoses if d.get('diagnosis_type') == diagnosis_type]
+    
+    all_conditions = []
+    
+    # Extract conditions from each diagnosis
+    for diagnosis in diagnoses:
+        # Get from result_data
+        result_data = diagnosis.get('result_data')
+        if result_data:
+            if isinstance(result_data, str):
+                try:
+                    result_data = json.loads(result_data)
+                except:
+                    result_data = {}
+            
+            conditions = extract_conditions_from_diagnosis({'result_data': result_data})
+            all_conditions.extend(conditions)
+        
+        # Also try to get from diagnosis_type specific fields
+        diagnosis_type_val = diagnosis.get('diagnosis_type', '')
+        if diagnosis_type_val == 'diabetes':
+            all_conditions.append('Diabetes Risk Assessment')
+        elif diagnosis_type_val == 'lung':
+            all_conditions.append('Lung Disease Risk')
+        elif diagnosis_type_val == 'bp':
+            all_conditions.append('Blood Pressure Assessment')
+    
+    # Count conditions
+    condition_counts = Counter(all_conditions)
+    
+    if not condition_counts:
+        return {
+            'success': False,
+            'message': 'Could not extract conditions from diagnosis data',
+            'data': {
+                'most_common': [],
+                'total_conditions_tracked': 0,
+                'conditions_count': 0,
+                'data_points': len(diagnoses)
+            }
+        }
+    
+    # Get top conditions
+    most_common = condition_counts.most_common(limit)
+    total_conditions = sum(condition_counts.values())
+    
+    # Format response
+    conditions_data = []
+    for condition, count in most_common:
+        percentage = round((count / total_conditions) * 100, 2)
+        conditions_data.append({
+            'condition': condition,
+            'count': count,
+            'percentage': percentage,
+            'prevalence': 'High' if percentage > 20 else 'Medium' if percentage > 10 else 'Low'
+        })
+    
+    return {
+        'success': True,
+        'data': {
+            'most_common': conditions_data,
+            'total_conditions_tracked': len(condition_counts),
+            'conditions_count': len(condition_counts),
+            'data_points': len(diagnoses),
+            'summary': {
+                'total_diagnoses': len(diagnoses),
+                'unique_conditions': len(condition_counts),
+                'top_condition': most_common[0][0] if most_common else None,
+                'top_condition_count': most_common[0][1] if most_common else 0
+            }
+        }
+    }
+
+@app.route('/api/admin/common-conditions', methods=['GET'])
+@admin_required
+def get_common_conditions():
+    """Get the most common conditions from all users."""
+    limit = request.args.get('limit', 10, type=int)
+    diagnosis_type = request.args.get('type', None)
+    
+    result = analyze_common_conditions(limit, diagnosis_type)
+    return jsonify(result)
+
+@app.route('/api/admin/condition-trends', methods=['GET'])
+@admin_required
+def get_condition_trends():
+    """Get condition trends over time."""
+    stats = get_all_stats()
+    diagnoses = stats.get('diagnoses', [])
+    
+    if not diagnoses:
+        return jsonify({
+            'success': False,
+            'message': 'No diagnosis data available',
+            'trends': []
+        })
+    
+    # Group by date and count
+    trends_by_date = {}
+    all_conditions = Counter()
+    
+    for diagnosis in diagnoses:
+        created_at = diagnosis.get('created_at', '')
+        date = created_at.split('T')[0] if created_at else 'unknown'
+        
+        # Extract conditions
+        result_data = diagnosis.get('result_data')
+        if result_data:
+            if isinstance(result_data, str):
+                try:
+                    result_data = json.loads(result_data)
+                except:
+                    result_data = {}
+            
+            conditions = extract_conditions_from_diagnosis({'result_data': result_data})
+            all_conditions.update(conditions)
+            
+            if date not in trends_by_date:
+                trends_by_date[date] = Counter()
+            trends_by_date[date].update(conditions)
+    
+    # Get top 5 conditions
+    top_conditions = [c[0] for c in all_conditions.most_common(5)]
+    
+    # Format trend data
+    trend_data = []
+    for condition in top_conditions:
+        trend_points = []
+        for date in sorted(trends_by_date.keys()):
+            count = trends_by_date[date].get(condition, 0)
+            if count > 0 or trend_points:  # Include if it has any count or already started
+                trend_points.append({
+                    'date': date,
+                    'count': count
+                })
+        
+        if trend_points:
+            trend_data.append({
+                'condition': condition,
+                'trend': trend_points,
+                'total': sum(p['count'] for p in trend_points)
+            })
+    
+    return jsonify({
+        'success': True,
+        'trends': trend_data,
+        'total_conditions': len(all_conditions),
+        'top_conditions': top_conditions
+    })
+
+@app.route('/api/admin/risk-analysis', methods=['GET'])
+@admin_required
+def get_risk_analysis():
+    """Analyze risk distribution across most common conditions."""
+    stats = get_all_stats()
+    diagnoses = stats.get('diagnoses', [])
+    
+    if not diagnoses:
+        return jsonify({
+            'success': False,
+            'message': 'No diagnosis data available',
+            'risk_by_condition': []
+        })
+    
+    # Map conditions to risk levels
+    condition_risks = {}
+    
+    for diagnosis in diagnoses:
+        risk_level = diagnosis.get('risk_level', 'unknown')
+        result_data = diagnosis.get('result_data')
+        
+        if result_data:
+            if isinstance(result_data, str):
+                try:
+                    result_data = json.loads(result_data)
+                except:
+                    result_data = {}
+            
+            conditions = extract_conditions_from_diagnosis({'result_data': result_data})
+            
+            for condition in conditions:
+                if condition not in condition_risks:
+                    condition_risks[condition] = {
+                        'low': 0,
+                        'medium': 0,
+                        'high': 0,
+                        'critical': 0,
+                        'total': 0
+                    }
+                
+                if risk_level in condition_risks[condition]:
+                    condition_risks[condition][risk_level] += 1
+                condition_risks[condition]['total'] += 1
+    
+    # Format response - get top conditions by frequency
+    top_conditions = sorted(condition_risks.items(), key=lambda x: x[1]['total'], reverse=True)[:10]
+    
+    risk_analysis = []
+    for condition, risks in top_conditions:
+        total = risks['total']
+        risk_analysis.append({
+            'condition': condition,
+            'risk_distribution': {
+                'low': round((risks['low'] / total) * 100, 2) if total > 0 else 0,
+                'medium': round((risks['medium'] / total) * 100, 2) if total > 0 else 0,
+                'high': round((risks['high'] / total) * 100, 2) if total > 0 else 0,
+                'critical': round((risks['critical'] / total) * 100, 2) if total > 0 else 0
+            },
+            'total_cases': total,
+            'average_risk': 'High' if risks['high'] + risks['critical'] > total/2 else 'Medium' if risks['medium'] > total/4 else 'Low'
+        })
+    
+    return jsonify({
+        'success': True,
+        'risk_by_condition': risk_analysis,
+        'total_conditions_analyzed': len(condition_risks)
+    })
+
+# ==================================================
 # Health Check
 # ==================================================
 @app.route('/')
