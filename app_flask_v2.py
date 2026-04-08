@@ -520,7 +520,334 @@ def symptom_history(user_id):
     return jsonify({'history': [h for h in history if h.get('diagnosis_type') == 'symptoms']})
 
 # ==================================================
-# API Routes - Diagnosis
+# SMART DIAGNOSIS ENDPOINT (NEW)
+# ==================================================
+@app.route('/api/smart-diagnosis', methods=['POST'])
+def smart_diagnosis():
+    """
+    Enhanced symptom analysis with:
+    1. Smart symptom weighting
+    2. Probable disease calculation
+    3. Gemini AI medicine & dosage
+    """
+    try:
+        data = request.json
+        symptoms = data.get('symptoms', [])
+        patient_info = data.get('patient_info', {})
+        user_id = data.get('user_id')
+        
+        # Validate input
+        if isinstance(symptoms, str):
+            symptoms = [s.strip() for s in symptoms.split(',') if s.strip()]
+        
+        if not symptoms:
+            return jsonify({'error': 'No symptoms provided'}), 400
+        
+        # Get smart diagnosis with weighted analysis
+        diagnosis_result = perform_smart_diagnosis(symptoms, patient_info)
+        
+        # Save to database
+        if user_id:
+            risk = diagnosis_result.get('risk_level', 'unknown')
+            save_to_db(user_id, 'symptoms', {
+                'symptoms': symptoms,
+                'patient_info': patient_info,
+                'analysis_type': 'smart_weighted'
+            }, diagnosis_result, risk)
+        
+        return jsonify(diagnosis_result)
+    
+    except Exception as e:
+        print(f"Smart diagnosis error: {e}")
+        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
+
+# ==================================================
+# HELPER FUNCTIONS FOR SMART DIAGNOSIS
+# ==================================================
+
+# Disease-Symptom Mapping with weights
+DISEASE_SYMPTOM_WEIGHTS = {
+    "heart disease": {
+        "chest pain": 3,
+        "shortness of breath": 3,
+        "palpitations": 2,
+        "dizziness": 2,
+        "fatigue": 2,
+        "sweating": 2,
+        "numbness": 1
+    },
+    "hypertension": {
+        "headache": 2,
+        "dizziness": 2,
+        "shortness of breath": 2,
+        "chest pain": 2,
+        "blurred vision": 2,
+        "fatigue": 1
+    },
+    "pneumonia": {
+        "cough": 3,
+        "fever": 3,
+        "shortness of breath": 3,
+        "chest pain": 2,
+        "fatigue": 2
+    },
+    "asthma": {
+        "shortness of breath": 3,
+        "cough": 3,
+        "chest pain": 2,
+        "wheezing": 3,
+        "fatigue": 1
+    },
+    "bronchitis": {
+        "cough": 3,
+        "fatigue": 2,
+        "shortness of breath": 2,
+        "fever": 2,
+        "chest pain": 2
+    },
+    "flu": {
+        "fever": 3,
+        "cough": 2,
+        "fatigue": 2,
+        "headache": 2,
+        "muscle pain": 2,
+        "sore throat": 2
+    },
+    "covid-19": {
+        "fever": 3,
+        "cough": 3,
+        "fatigue": 2,
+        "shortness of breath": 3,
+        "headache": 2
+    },
+    "diabetes": {
+        "frequent urination": 3,
+        "increased thirst": 3,
+        "fatigue": 2,
+        "blurred vision": 2,
+        "numbness": 2,
+        "weight loss": 2
+    },
+    "gastritis": {
+        "abdominal pain": 3,
+        "nausea": 3,
+        "vomiting": 2,
+        "loss of appetite": 2,
+        "bloating": 2
+    },
+    "thyroid disease": {
+        "fatigue": 2,
+        "weight gain": 2,
+        "cold sensitivity": 2,
+        "dry skin": 1,
+        "depression": 1
+    },
+    "arthritis": {
+        "joint pain": 3,
+        "stiffness": 3,
+        "swelling": 2,
+        "redness": 2
+    }
+}
+
+def calculate_disease_scores(symptoms):
+    """
+    Calculate disease scores based on symptom weights
+    Returns top 3 diseases with scores and confidence
+    """
+    symptoms_lower = [s.lower().strip() for s in symptoms]
+    scores = {}
+    
+    for disease, symptom_weights in DISEASE_SYMPTOM_WEIGHTS.items():
+        score = 0
+        matched = []
+        
+        for symptom_keyword, weight in symptom_weights.items():
+            for user_symptom in symptoms_lower:
+                if symptom_keyword in user_symptom or user_symptom in symptom_keyword:
+                    score += weight
+                    matched.append({'symptom': symptom_keyword, 'weight': weight})
+                    break
+        
+        if score > 0:
+            max_score = sum(symptom_weights.values())
+            confidence = min(int((score / max_score) * 100), 95)
+            scores[disease] = {
+                'score': score,
+                'confidence': confidence,
+                'matched': matched,
+                'max_score': max_score
+            }
+    
+    # Sort by score
+    sorted_diseases = sorted(scores.items(), key=lambda x: x[1]['score'], reverse=True)
+    
+    return {
+        'top_diseases': [{'disease': d, **data} for d, data in sorted_diseases[:3]],
+        'primary_disease': sorted_diseases[0][0] if sorted_diseases else None,
+        'all_scores': scores
+    }
+
+def get_medicine_for_disease(disease, age=None, gender=None):
+    """
+    Get medicine recommendations for a disease
+    Adjusted based on age and gender
+    """
+    medicine_database = {
+        "heart disease": [
+            {"name": "Aspirin", "dosage": "75-100mg daily", "purpose": "Blood thinner"},
+            {"name": "Atorvastatin", "dosage": "10-40mg daily", "purpose": "Cholesterol"},
+            {"name": "Lisinopril", "dosage": "10-20mg daily", "purpose": "Blood pressure"}
+        ],
+        "hypertension": [
+            {"name": "Amlodipine", "dosage": "5-10mg daily", "purpose": "Blood pressure"},
+            {"name": "Lisinopril", "dosage": "10-20mg daily", "purpose": "Blood pressure"},
+            {"name": "Hydrochlorothiazide", "dosage": "12.5-25mg daily", "purpose": "Diuretic"}
+        ],
+        "diabetes": [
+            {"name": "Metformin", "dosage": "500-1000mg twice daily", "purpose": "Blood sugar"},
+            {"name": "Glimepiride", "dosage": "1-4mg daily", "purpose": "Blood sugar"}
+        ],
+        "flu": [
+            {"name": "Paracetamol", "dosage": "500mg 3x daily", "purpose": "Fever/Pain"},
+            {"name": "Oseltamivir", "dosage": "75mg twice daily", "purpose": "Antiviral"}
+        ],
+        "pneumonia": [
+            {"name": "Amoxicillin", "dosage": "500mg 3x daily", "purpose": "Antibiotic"},
+            {"name": "Azithromycin", "dosage": "500mg daily", "purpose": "Antibiotic"}
+        ],
+        "asthma": [
+            {"name": "Albuterol", "dosage": "2 puffs as needed", "purpose": "Bronchodilator"},
+            {"name": "Fluticasone", "dosage": "1-2 puffs daily", "purpose": "Inhaled steroid"}
+        ]
+    }
+    
+    return medicine_database.get(disease.lower(), [
+        {"name": "Consult doctor", "dosage": "As prescribed", "purpose": "Professional diagnosis"}
+    ])
+
+def perform_smart_diagnosis(symptoms, patient_info):
+    """
+    Main smart diagnosis function combining:
+    1. Weighted symptom scoring
+    2. Disease calculation
+    3. Medicine recommendations
+    4. Gemini AI enhancement
+    """
+    # Step 1: Calculate probable diseases
+    disease_analysis = calculate_disease_scores(symptoms)
+    primary_disease = disease_analysis['primary_disease']
+    
+    if not primary_disease:
+        return {
+            'success': False,
+            'message': 'Unable to determine disease from symptoms',
+            'symptoms_count': len(symptoms)
+        }
+    
+    # Step 2: Get medicine recommendations
+    age = safe_int(patient_info.get('age', 0))
+    gender = patient_info.get('gender', 'unknown')
+    
+    medicines = get_medicine_for_disease(primary_disease, age, gender)
+    
+    # Step 3: Try Gemini enhancement
+    gemini_result = None
+    if GEMINI_AVAILABLE:
+        gemini_result = try_gemini_medicine_advice(symptoms, primary_disease, age, gender)
+    
+    # Combine results
+    result = {
+        'success': True,
+        'primary_disease': primary_disease.title(),
+        'confidence': disease_analysis['top_diseases'][0]['confidence'] if disease_analysis['top_diseases'] else 0,
+        'symptoms_analyzed': symptoms,
+        'symptom_analysis': {
+            'total_reported': len(symptoms),
+            'total_matched': len(disease_analysis['top_diseases'][0]['matched']) if disease_analysis['top_diseases'] else 0,
+            'most_critical_symptom': disease_analysis['top_diseases'][0]['matched'][0]['symptom'].title() if disease_analysis['top_diseases'] and disease_analysis['top_diseases'][0]['matched'] else None,
+            'weights_applied': True
+        },
+        'top_3_diseases': [
+            {
+                'disease': d['disease'].title(),
+                'confidence': d['confidence'],
+                'matched_symptoms': len(d['matched'])
+            }
+            for d in disease_analysis['top_diseases']
+        ],
+        'medicines': medicines if not gemini_result else gemini_result.get('medicines', medicines),
+        'precautions': gemini_result.get('precautions') if gemini_result else get_disease_precautions(primary_disease),
+        'risk_level': 'high' if disease_analysis['top_diseases'][0]['confidence'] > 70 else 'medium' if disease_analysis['top_diseases'][0]['confidence'] > 40 else 'low',
+        'ai_provider': 'smart_weighted_gemini' if gemini_result else 'smart_weighted',
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    return result
+
+def try_gemini_medicine_advice(symptoms, disease, age, gender):
+    """Try to get enhanced advice from Gemini API"""
+    try:
+        if not gemini_model:
+            return None
+        
+        prompt = f"""Patient: {age}yr {gender}
+Symptoms: {', '.join(symptoms)}
+Disease: {disease}
+
+Provide JSON:
+{{
+  "medicines": [
+    {{"name": "...", "dosage": "...", "duration": "..."}}
+  ],
+  "precautions": [...]
+}}"""
+        
+        response = gemini_model.generate_content(prompt)
+        text = response.text
+        
+        # Try to extract JSON
+        import re
+        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+            return result
+    except Exception as e:
+        print(f"Gemini medicine advice error: {e}")
+    
+    return None
+
+def get_disease_precautions(disease):
+    """Get precautions for a disease"""
+    precautions = {
+        "heart disease": [
+            "Avoid strenuous activities",
+            "Monitor blood pressure regularly",
+            "Follow salt-restricted diet",
+            "Seek emergency help if chest pain continues"
+        ],
+        "diabetes": [
+            "Monitor blood sugar regularly",
+            "Maintain healthy diet",
+            "Regular exercise (30 mins daily)",
+            "Check feet daily for injuries"
+        ],
+        "flu": [
+            "Rest adequately",
+            "Stay hydrated",
+            "Avoid contact with others",
+            "Monitor fever"
+        ],
+        "pneumonia": [
+            "Rest and avoid exertion",
+            "Stay hydrated",
+            "Use humidifier",
+            "Elevate head while sleeping"
+        ]
+    }
+    
+    return precautions.get(disease.lower(), ["Consult healthcare professional"])
+
 # ==================================================
 @app.route('/api/diabetes', methods=['POST'])
 def diabetes():

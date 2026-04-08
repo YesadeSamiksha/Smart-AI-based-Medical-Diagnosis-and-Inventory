@@ -699,6 +699,17 @@
                         <ul id="recommendationsList" class="rec-list"></ul>
                     </div>
                     
+                    <div id="medicinesSection" style="display:none;">
+                        <h4 style="margin-top: 24px;"><i class="fas fa-pills mr-2"></i>Recommended Medicines</h4>
+                        <p style="font-size: 12px; color: #999; margin-bottom: 12px;">⚠️ Generic names only. Consult your doctor before taking any medicine.</p>
+                        <div id="medicinesList" class="medicines-list"></div>
+                    </div>
+                    
+                    <div id="cautionsSection" style="display:none;">
+                        <h4 style="margin-top: 24px;"><i class="fas fa-exclamation-circle mr-2" style="color: #f87171;"></i>Important Precautions</h4>
+                        <ul id="cautionsList" class="rec-list" style="list-style-type: disc; margin-left: 20px;"></ul>
+                    </div>
+                    
                     <div class="follow-up-questions">
                         <h4><i class="fas fa-question-circle mr-2"></i>Follow-up Questions for Your Doctor</h4>
                         <ol id="followUpList"></ol>
@@ -834,8 +845,8 @@
             
             let result;
             try {
-                // Call backend API
-                const response = await fetch(`${API_URL}/symptoms/analyze`, {
+                // Try smart diagnosis endpoint first
+                const response = await fetch(`${API_URL}/smart-diagnosis`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -844,9 +855,50 @@
                         user_id: userId
                     })
                 });
-                result = await response.json();
+                
+                const smartResult = await response.json();
+                
+                // Transform smart diagnosis result to UI format
+                if (smartResult.success) {
+                    result = {
+                        primary_conditions: smartResult.top_3_diseases.map((d, i) => ({
+                            name: d.disease,
+                            probability: d.confidence,
+                            severity: smartResult.risk_level === 'high' ? 'severe' : smartResult.risk_level === 'medium' ? 'moderate' : 'mild',
+                            description: i === 0 ? `Primary diagnosis with ${d.confidence}% confidence, ${d.matched_symptoms} symptoms matched` : `Alternative diagnosis`
+                        })),
+                        differential_diagnosis: smartResult.top_3_diseases.slice(1).map(d => d.disease),
+                        primary_disease: smartResult.primary_disease,
+                        confidence: smartResult.confidence,
+                        symptom_analysis: smartResult.symptom_analysis,
+                        medicines: smartResult.medicines,
+                        precautions: smartResult.precautions,
+                        risk_assessment: {
+                            overall_risk: smartResult.risk_level,
+                            urgency: smartResult.risk_level === 'high' ? 'urgent' : smartResult.risk_level === 'medium' ? 'soon' : 'routine',
+                            risk_factors: [`${selectedSymptoms.length} symptoms reported`, `Primary: ${smartResult.primary_disease}`]
+                        },
+                        recommendations: {
+                            immediate_actions: smartResult.precautions || ['Monitor your symptoms', 'Stay hydrated', 'Get adequate rest'],
+                            lifestyle_changes: ['Maintain a healthy diet', 'Regular sleep schedule'],
+                            when_to_seek_help: smartResult.risk_level === 'high' ? 'Seek medical attention immediately' : 'If symptoms persist beyond 48-72 hours',
+                            specialists: smartResult.risk_level === 'high' ? ['Emergency care if severe', 'Specialist consultation'] : ['General Practitioner']
+                        },
+                        follow_up_questions: [
+                            'How long have these symptoms persisted?',
+                            'Have you experienced these symptoms before?',
+                            'Are you currently taking any medications?'
+                        ],
+                        confidence_score: smartResult.confidence,
+                        ai_provider: smartResult.ai_provider,
+                        symptoms_analyzed: selectedSymptoms
+                    };
+                } else {
+                    // Fallback to local analysis if smart diagnosis fails
+                    result = localAnalysis(selectedSymptoms);
+                }
             } catch (error) {
-                console.error('API error, using local analysis:', error);
+                console.error('Smart diagnosis error, using local analysis:', error);
                 result = localAnalysis(selectedSymptoms);
             }
             
@@ -1000,6 +1052,35 @@
             
             if (recs.when_to_seek_help) {
                 recsList.innerHTML += `<li class="text-yellow-400">${recs.when_to_seek_help}</li>`;
+            }
+            
+            // Medicines section
+            const medicinesSection = document.getElementById('medicinesSection');
+            if (result.medicines && result.medicines.length > 0) {
+                medicinesSection.style.display = 'block';
+                const medicinesList = document.getElementById('medicinesList');
+                medicinesList.innerHTML = result.medicines.map(med => `
+                    <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                        <h5 style="color: #c4b5fd; font-weight: bold; margin-bottom: 6px;">${med.name || 'Medicine'}</h5>
+                        <div style="font-size: 13px; color: #d1d5db;">
+                            <div><strong>Dosage:</strong> ${med.dosage || 'As prescribed'}</div>
+                            ${med.duration ? `<div><strong>Duration:</strong> ${med.duration}</div>` : ''}
+                            ${med.purpose ? `<div><strong>Purpose:</strong> ${med.purpose}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                medicinesSection.style.display = 'none';
+            }
+            
+            // Precautions/Cautions
+            const cautionsSection = document.getElementById('cautionsSection');
+            if (result.precautions && result.precautions.length > 0) {
+                cautionsSection.style.display = 'block';
+                const cautionsList = document.getElementById('cautionsList');
+                cautionsList.innerHTML = result.precautions.map(c => `<li>${c}</li>`).join('');
+            } else {
+                cautionsSection.style.display = 'none';
             }
             
             // Follow-up questions
