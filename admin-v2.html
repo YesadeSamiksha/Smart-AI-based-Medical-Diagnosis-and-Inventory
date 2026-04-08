@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="ballpit.css">
@@ -298,6 +299,81 @@
             border: none;
             cursor: pointer;
             transition: all 0.2s ease;
+        }
+        
+        .btn-edit {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+        
+        .btn-edit:hover {
+            background: rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox {
+            appearance: none;
+            width: 50px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .toggle-checkbox:checked {
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            border-color: #8b5cf6;
+        }
+        
+        .toggle-checkbox::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-checkbox:checked::before {
+            transform: translateX(24px);
+        }
+        
+        /* AI Agent Status */
+        .ai-log-item {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .ai-log-success {
+            border-color: #22c55e;
+        }
+        
+        .ai-log-warning {
+            border-color: #eab308;
+        }
+        
+        .ai-log-info {
+            border-color: #3b82f6;
+        }
+            transition: all 0.2s ease;
             margin: 0 2px;
         }
         
@@ -360,6 +436,9 @@
                 <button class="admin-tab-btn" data-section="users">
                     <i class="fas fa-users mr-2"></i>Users
                 </button>
+                <button class="admin-tab-btn" data-section="orders">
+                    <i class="fas fa-shopping-cart mr-2"></i>Orders
+                </button>
                 <button class="admin-tab-btn" data-section="inventory">
                     <i class="fas fa-boxes mr-2"></i>Inventory
                 </button>
@@ -407,14 +486,53 @@
         
         <!-- Users Section -->
         <div id="section-users" class="admin-section">
+            <!-- User Analytics Cards -->
+            <div class="admin-grid mb-6">
+                <div class="admin-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));">
+                    <div class="stat-big text-blue-400" id="usersTotalCount">0</div>
+                    <div class="stat-label">Registered Users</div>
+                </div>
+                <div class="admin-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));">
+                    <div class="stat-big text-green-400" id="usersActiveToday">0</div>
+                    <div class="stat-label">Active Today</div>
+                </div>
+                <div class="admin-card" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05));">
+                    <div class="stat-big text-purple-400" id="usersWithAssessments">0</div>
+                    <div class="stat-label">Users with Assessments</div>
+                </div>
+                <div class="admin-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));">
+                    <div class="stat-big text-red-400" id="usersHighRisk">0</div>
+                    <div class="stat-label">High Risk Users</div>
+                </div>
+            </div>
+            
+            <!-- User Activity Chart -->
+            <div class="admin-card mb-6">
+                <h3 class="text-xl font-bold mb-4"><i class="fas fa-chart-area mr-2 text-purple-400"></i>User Activity (Last 7 Days)</h3>
+                <div class="chart-container" style="height: 200px;">
+                    <canvas id="userActivityChart"></canvas>
+                </div>
+            </div>
+            
             <div class="admin-card">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold">User Management</h3>
+                    <h3 class="text-2xl font-bold"><i class="fas fa-users mr-2 text-purple-400"></i>User Management</h3>
                     <div class="flex gap-3">
                         <input type="text" id="userSearch" placeholder="Search users..." 
-                               class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white">
+                               class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white"
+                               onkeyup="filterUsers(this.value)">
+                        <select id="userFilter" class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white" onchange="filterUsersByRisk(this.value)">
+                            <option value="all">All Users</option>
+                            <option value="high">High Risk</option>
+                            <option value="medium">Medium Risk</option>
+                            <option value="low">Low Risk</option>
+                            <option value="none">No Assessments</option>
+                        </select>
                         <button onclick="loadUsers()" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700">
                             <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button onclick="exportUsersCSV()" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700" title="Export to CSV">
+                            <i class="fas fa-download"></i>
                         </button>
                     </div>
                 </div>
@@ -425,6 +543,7 @@
                             <tr>
                                 <th>User</th>
                                 <th>Email</th>
+                                <th>Registered</th>
                                 <th>Assessments</th>
                                 <th>Last Activity</th>
                                 <th>Risk Summary</th>
@@ -433,8 +552,74 @@
                         </thead>
                         <tbody id="usersTableBody">
                             <tr>
-                                <td colspan="6" class="text-center text-gray-400 py-8">
+                                <td colspan="7" class="text-center text-gray-400 py-8">
                                     <i class="fas fa-spinner fa-spin mr-2"></i>Loading users...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Orders Section -->
+        <div id="section-orders" class="admin-section">
+            <div class="admin-card">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold"><i class="fas fa-shopping-cart mr-3 text-blue-400"></i>Customer Orders</h3>
+                    <div class="flex gap-3">
+                        <select id="orderStatusFilter" class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white" onchange="filterOrders(this.value)">
+                            <option value="all">All Orders</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <button onclick="loadOrders()" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Order Stats -->
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <div class="text-2xl font-bold text-blue-400" id="ordersTotal">0</div>
+                        <div class="text-sm text-gray-400">Total Orders</div>
+                    </div>
+                    <div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
+                        <div class="text-2xl font-bold text-yellow-400" id="ordersPending">0</div>
+                        <div class="text-sm text-gray-400">Pending</div>
+                    </div>
+                    <div class="p-4 rounded-lg" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                        <div class="text-2xl font-bold text-green-400" id="ordersDelivered">0</div>
+                        <div class="text-sm text-gray-400">Delivered</div>
+                    </div>
+                    <div class="p-4 rounded-lg" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <div class="text-2xl font-bold text-purple-400" id="ordersRevenue">₹0</div>
+                        <div class="text-sm text-gray-400">Total Revenue</div>
+                    </div>
+                </div>
+                
+                <!-- Orders Table -->
+                <div class="overflow-x-auto">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Payment</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center text-gray-400 py-8">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading orders...
                                 </td>
                             </tr>
                         </tbody>
@@ -445,6 +630,58 @@
         
         <!-- Inventory Section -->
         <div id="section-inventory" class="admin-section">
+            <!-- AI Agent Control Panel -->
+            <div class="admin-card mb-6" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                            <i class="fas fa-robot text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">AI Inventory Agent</h3>
+                            <p class="text-sm text-gray-400" id="aiAgentStatus">Initializing...</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <span class="text-sm text-gray-400">Auto-Reorder</span>
+                            <input type="checkbox" id="aiAgentToggle" class="toggle-checkbox" onchange="toggleAIAgent(this.checked)">
+                        </label>
+                        <button onclick="runAIAgent()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>Run Now
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- AI Agent Stats -->
+                <div class="grid grid-cols-4 gap-4 mb-4">
+                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
+                        <div class="text-xl font-bold text-blue-400" id="aiItemsMonitored">0</div>
+                        <div class="text-xs text-gray-400">Items Monitored</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
+                        <div class="text-xl font-bold text-yellow-400" id="aiLowStockAlerts">0</div>
+                        <div class="text-xs text-gray-400">Low Stock Alerts</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
+                        <div class="text-xl font-bold text-green-400" id="aiAutoOrders">0</div>
+                        <div class="text-xs text-gray-400">Auto Orders</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
+                        <div class="text-xl font-bold text-purple-400" id="aiLastCheck">Never</div>
+                        <div class="text-xs text-gray-400">Last Check</div>
+                    </div>
+                </div>
+                
+                <!-- AI Insights -->
+                <div id="aiInsights" class="text-sm">
+                    <div class="text-gray-400 italic">
+                        <i class="fas fa-lightbulb mr-2 text-yellow-400"></i>
+                        Enable AI Agent to get intelligent inventory insights and automatic reordering
+                    </div>
+                </div>
+            </div>
+            
             <div class="admin-card mb-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-bold"><i class="fas fa-boxes mr-3 text-purple-400"></i>Inventory Management</h3>
@@ -494,6 +731,21 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+            
+            <!-- AI Activity Log -->
+            <div class="admin-card">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold"><i class="fas fa-list mr-2 text-blue-400"></i>AI Agent Activity Log</h3>
+                    <button onclick="loadAIActivityLog()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+                <div id="aiActivityLog" class="max-h-96 overflow-y-auto">
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-info-circle mr-2"></i>No activity yet
+                    </div>
                 </div>
             </div>
         </div>
@@ -602,6 +854,15 @@
         let riskChart = null;
         let typeChart = null;
         let userTrendChart = null;
+        let userActivityChart = null;
+        let allUsersData = []; // Store users data for filtering
+        
+        // AI Agent variables
+        let aiAgentEnabled = false;
+        let aiAgentInterval = null;
+        let inventoryData = [];
+        const LOW_STOCK_THRESHOLD = 10;
+        const AUTO_REORDER_QUANTITY = 50;
         
         // Check existing session
         document.addEventListener('DOMContentLoaded', function() {
@@ -649,52 +910,75 @@
         
         // Load admin stats from Supabase
         async function loadStats() {
+            console.log('📊 Loading admin stats...');
             try {
                 const supabase = window.MedAISupabase.getSupabase();
                 if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get registered users from profiles table
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, email, created_at');
+                
+                if (profilesError) {
+                    console.warn('Could not load profiles:', profilesError.message);
+                }
+                
+                const totalUsers = profilesData?.length || 0;
+                console.log('👥 Total registered users:', totalUsers);
                 
                 // Get total diagnoses
                 const { data: diagnosesData, error: diagError } = await supabase
                     .from('diagnosis_results')
                     .select('*');
                 
-                if (diagError) throw diagError;
+                if (diagError) {
+                    console.warn('Could not load diagnoses:', diagError.message);
+                }
                 
                 const totalDiagnoses = diagnosesData?.length || 0;
+                console.log('🏥 Total diagnoses:', totalDiagnoses);
                 
                 // Get today's diagnoses
                 const today = new Date().toISOString().split('T')[0];
                 const todayDiagnoses = diagnosesData?.filter(d => 
                     d.created_at?.startsWith(today)
                 ).length || 0;
+                console.log('📅 Today diagnoses:', todayDiagnoses);
                 
                 // Calculate risk distribution
                 const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
                 diagnosesData?.forEach(d => {
-                    riskCounts[d.risk_level] = (riskCounts[d.risk_level] || 0) + 1;
+                    if (d.risk_level && riskCounts.hasOwnProperty(d.risk_level)) {
+                        riskCounts[d.risk_level]++;
+                    }
                 });
+                console.log('⚠️ Risk distribution:', riskCounts);
                 
                 // Calculate type distribution
-                const typeCounts = {};
+                const typeCounts = { diabetes: 0, lung: 0, bp: 0, symptoms: 0 };
                 diagnosesData?.forEach(d => {
-                    typeCounts[d.diagnosis_type] = (typeCounts[d.diagnosis_type] || 0) + 1;
+                    if (d.diagnosis_type) {
+                        typeCounts[d.diagnosis_type] = (typeCounts[d.diagnosis_type] || 0) + 1;
+                    }
                 });
+                console.log('📋 Diagnosis types:', typeCounts);
                 
-                // Get unique users count (approximation from profiles or diagnosis users)
-                const uniqueUsers = new Set(diagnosesData?.map(d => d.user_id) || []).size;
+                const highRiskCount = (riskCounts.high || 0) + (riskCounts.critical || 0);
                 
                 // Update UI
-                document.getElementById('totalUsers').textContent = uniqueUsers;
+                document.getElementById('totalUsers').textContent = totalUsers;
                 document.getElementById('totalDiagnoses').textContent = totalDiagnoses;
                 document.getElementById('todayDiagnoses').textContent = todayDiagnoses;
-                document.getElementById('highRiskCount').textContent = 
-                    (riskCounts.high || 0) + (riskCounts.critical || 0);
+                document.getElementById('highRiskCount').textContent = highRiskCount;
+                
+                console.log('✅ Stats updated in UI');
                 
                 // Render charts with real data
                 const chartData = {
                     chart_data: {
-                        risk_labels: Object.keys(riskCounts),
-                        risk_values: Object.values(riskCounts),
+                        risk_labels: Object.keys(riskCounts).filter(k => riskCounts[k] > 0 || k !== 'critical'),
+                        risk_values: Object.keys(riskCounts).filter(k => riskCounts[k] > 0 || k !== 'critical').map(k => riskCounts[k]),
                         type_labels: Object.keys(typeCounts),
                         type_values: Object.values(typeCounts)
                     }
@@ -702,7 +986,7 @@
                 renderCharts(chartData);
                 
             } catch (error) {
-                console.error('Failed to load stats:', error);
+                console.error('❌ Failed to load stats:', error);
                 // Set default values if error
                 document.getElementById('totalUsers').textContent = '0';
                 document.getElementById('totalDiagnoses').textContent = '0';
@@ -712,141 +996,401 @@
         }
         
         function renderCharts(data) {
-            // Risk distribution chart
-            const riskCtx = document.getElementById('riskChart').getContext('2d');
-            if (riskChart) riskChart.destroy();
+            console.log('📊 Rendering charts with data:', data);
             
-            const riskData = data.chart_data?.risk_labels || ['low', 'medium', 'high'];
-            const riskValues = data.chart_data?.risk_values || [0, 0, 0];
-            
-            riskChart = new Chart(riskCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: riskData.map(r => r.charAt(0).toUpperCase() + r.slice(1)),
-                    datasets: [{
-                        data: riskValues,
-                        backgroundColor: ['#22c55e', '#eab308', '#ef4444', '#dc2626']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#d1d5db' } }
-                    }
+            try {
+                // Risk distribution chart
+                const riskCtx = document.getElementById('riskChart');
+                if (!riskCtx) {
+                    console.error('Risk chart canvas not found');
+                    return;
                 }
+                
+                if (riskChart) riskChart.destroy();
+                
+                // Default risk labels and values
+                const riskLabels = data.chart_data?.risk_labels || ['Low', 'Medium', 'High'];
+                const riskValues = data.chart_data?.risk_values || [0, 0, 0];
+                
+                // Check if there's any data
+                const hasRiskData = riskValues.some(v => v > 0);
+                
+                riskChart = new Chart(riskCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: riskLabels.map(r => r.charAt(0).toUpperCase() + r.slice(1)),
+                        datasets: [{
+                            data: hasRiskData ? riskValues : [1, 1, 1], // Show placeholder if no data
+                            backgroundColor: hasRiskData 
+                                ? ['#22c55e', '#eab308', '#ef4444', '#dc2626']
+                                : ['#374151', '#374151', '#374151'], // Gray if no data
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'bottom', 
+                                labels: { color: '#d1d5db' } 
+                            },
+                            title: {
+                                display: !hasRiskData,
+                                text: 'No risk data yet',
+                                color: '#6b7280'
+                            }
+                        }
+                    }
+                });
+                
+                // Type distribution chart
+                const typeCtx = document.getElementById('typeChart');
+                if (!typeCtx) {
+                    console.error('Type chart canvas not found');
+                    return;
+                }
+                
+                if (typeChart) typeChart.destroy();
+                
+                const typeLabels = data.chart_data?.type_labels || ['Diabetes', 'Lung', 'BP', 'Symptoms'];
+                const typeValues = data.chart_data?.type_values || [0, 0, 0, 0];
+                
+                // Check if there's any data
+                const hasTypeData = typeValues.some(v => v > 0);
+                
+                typeChart = new Chart(typeCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: typeLabels.map(t => t.charAt(0).toUpperCase() + t.slice(1)),
+                        datasets: [{
+                            label: 'Count',
+                            data: typeValues,
+                            backgroundColor: ['#f9a8d4', '#93c5fd', '#fca5a5', '#a78bfa'],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            title: {
+                                display: !hasTypeData,
+                                text: 'No diagnosis data yet',
+                                color: '#6b7280'
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255,255,255,0.1)' }, 
+                                ticks: { color: '#9ca3af', stepSize: 1 } 
+                            },
+                            x: { grid: { display: false }, ticks: { color: '#d1d5db' } }
+                        }
+                    }
+                });
+                
+                console.log('✅ Charts rendered successfully');
+            } catch (error) {
+                console.error('❌ Error rendering charts:', error);
+            }
+        }
+        
+        // Load users from Supabase 
+        async function loadUsers() {
+            console.log('👥 Loading user list and analytics...');
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get registered users from profiles table
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, email, full_name, role, created_at');
+                
+                if (profilesError) {
+                    console.warn('Could not load profiles:', profilesError.message);
+                }
+                
+                // Get diagnosis results to analyze activity
+                const { data: diagnosesData, error: diagError } = await supabase
+                    .from('diagnosis_results')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (diagError) {
+                    console.warn('Could not load diagnoses:', diagError.message);
+                }
+                
+                // Calculate user activity stats
+                const today = new Date().toISOString().split('T')[0];
+                const activeToday = new Set();
+                const last7Days = {};
+                
+                // Initialize last 7 days
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    last7Days[date.toISOString().split('T')[0]] = 0;
+                }
+                
+                // Group diagnoses by user_id
+                const diagnosisByUser = {};
+                diagnosesData?.forEach(d => {
+                    const userId = d.user_id;
+                    const diagDate = d.created_at?.split('T')[0];
+                    
+                    // Track active today
+                    if (diagDate === today) {
+                        activeToday.add(userId);
+                    }
+                    
+                    // Track last 7 days activity
+                    if (last7Days.hasOwnProperty(diagDate)) {
+                        last7Days[diagDate]++;
+                    }
+                    
+                    if (!diagnosisByUser[userId]) {
+                        diagnosisByUser[userId] = {
+                            total_assessments: 0,
+                            last_assessment: null,
+                            risk_summary: { low: 0, medium: 0, high: 0, critical: 0 },
+                            diagnosis_history: []
+                        };
+                    }
+                    
+                    diagnosisByUser[userId].total_assessments++;
+                    if (d.risk_level && diagnosisByUser[userId].risk_summary.hasOwnProperty(d.risk_level)) {
+                        diagnosisByUser[userId].risk_summary[d.risk_level]++;
+                    }
+                    
+                    diagnosisByUser[userId].diagnosis_history.push(d);
+                    
+                    if (!diagnosisByUser[userId].last_assessment || 
+                        new Date(d.created_at) > new Date(diagnosisByUser[userId].last_assessment)) {
+                        diagnosisByUser[userId].last_assessment = d.created_at;
+                    }
+                });
+                
+                // Build complete users list from profiles + diagnosis data
+                const userStats = {};
+                
+                // Add all registered users from profiles
+                profilesData?.forEach(profile => {
+                    userStats[profile.id] = {
+                        id: profile.id,
+                        email: profile.email,
+                        full_name: profile.full_name || 'User',
+                        role: profile.role || 'user',
+                        registered_at: profile.created_at,
+                        total_assessments: diagnosisByUser[profile.id]?.total_assessments || 0,
+                        last_assessment: diagnosisByUser[profile.id]?.last_assessment || null,
+                        risk_summary: diagnosisByUser[profile.id]?.risk_summary || { low: 0, medium: 0, high: 0, critical: 0 },
+                        max_risk: getMaxRiskLevel(diagnosisByUser[profile.id]?.risk_summary || {})
+                    };
+                });
+                
+                // Add any users from diagnosis data not in profiles
+                Object.keys(diagnosisByUser).forEach(userId => {
+                    if (!userStats[userId]) {
+                        userStats[userId] = {
+                            id: userId,
+                            email: `user-${userId.substring(0, 8)}@...`,
+                            full_name: `User ${userId.substring(0, 8)}`,
+                            role: 'user',
+                            registered_at: null,
+                            total_assessments: diagnosisByUser[userId].total_assessments,
+                            last_assessment: diagnosisByUser[userId].last_assessment,
+                            risk_summary: diagnosisByUser[userId].risk_summary,
+                            max_risk: getMaxRiskLevel(diagnosisByUser[userId].risk_summary)
+                        };
+                    }
+                });
+                
+                const users = Object.values(userStats);
+                allUsersData = users; // Store for filtering
+                console.log(`✅ Found ${users.length} users`);
+                
+                // Update user analytics cards
+                const usersWithAssessments = users.filter(u => u.total_assessments > 0).length;
+                const highRiskUsers = users.filter(u => u.max_risk === 'high' || u.max_risk === 'critical').length;
+                
+                document.getElementById('usersTotalCount').textContent = users.length;
+                document.getElementById('usersActiveToday').textContent = activeToday.size;
+                document.getElementById('usersWithAssessments').textContent = usersWithAssessments;
+                document.getElementById('usersHighRisk').textContent = highRiskUsers;
+                
+                // Render user activity chart
+                renderUserActivityChart(last7Days);
+                
+                // Render users table
+                renderUsersTable(users);
+                
+            } catch (error) {
+                console.error('❌ Failed to load users:', error);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-red-400 py-8">Failed to load users. Check console for details.</td></tr>';
+            }
+        }
+        
+        // Get max risk level for a user
+        function getMaxRiskLevel(riskSummary) {
+            if (riskSummary.critical > 0) return 'critical';
+            if (riskSummary.high > 0) return 'high';
+            if (riskSummary.medium > 0) return 'medium';
+            if (riskSummary.low > 0) return 'low';
+            return 'none';
+        }
+        
+        // Render user activity chart for last 7 days
+        function renderUserActivityChart(last7Days) {
+            const ctx = document.getElementById('userActivityChart');
+            if (!ctx) return;
+            
+            if (userActivityChart) userActivityChart.destroy();
+            
+            const dates = Object.keys(last7Days).sort();
+            const values = dates.map(d => last7Days[d]);
+            const labels = dates.map(d => {
+                const date = new Date(d);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             });
             
-            // Type distribution chart
-            const typeCtx = document.getElementById('typeChart').getContext('2d');
-            if (typeChart) typeChart.destroy();
-            
-            const typeLabels = data.chart_data?.type_labels || ['diabetes', 'lung', 'bp', 'symptoms'];
-            const typeValues = data.chart_data?.type_values || [0, 0, 0, 0];
-            
-            typeChart = new Chart(typeCtx, {
-                type: 'bar',
+            userActivityChart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
                 data: {
-                    labels: typeLabels.map(t => t.charAt(0).toUpperCase() + t.slice(1)),
+                    labels: labels,
                     datasets: [{
-                        label: 'Count',
-                        data: typeValues,
-                        backgroundColor: ['#f9a8d4', '#93c5fd', '#fca5a5', '#a78bfa']
+                        label: 'Assessments',
+                        data: values,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#8b5cf6'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.parsed.y} assessments`
+                            }
+                        }
+                    },
                     scales: {
-                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' }, 
+                            ticks: { color: '#9ca3af', stepSize: 1 } 
+                        },
                         x: { grid: { display: false }, ticks: { color: '#d1d5db' } }
                     }
                 }
             });
         }
         
-        // Load users from Supabase 
-        async function loadUsers() {
+        // Render users table
+        function renderUsersTable(users) {
             const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
             
-            try {
-                const supabase = window.MedAISupabase.getSupabase();
-                if (!supabase) throw new Error('Supabase not initialized');
-                
-                // Get diagnosis results to analyze users
-                const { data: diagnosesData, error: diagError } = await supabase
-                    .from('diagnosis_results')
-                    .select('*');
-                
-                if (diagError) throw diagError;
-                
-                // Group diagnoses by user
-                const userStats = {};
-                diagnosesData?.forEach(d => {
-                    const userId = d.user_id;
-                    if (!userStats[userId]) {
-                        userStats[userId] = {
-                            id: userId,
-                            email: `user-${userId.substring(0, 8)}@example.com`,
-                            full_name: `User ${userId.substring(0, 8)}`,
-                            total_assessments: 0,
-                            last_assessment: null,
-                            risk_summary: { low: 0, medium: 0, high: 0, critical: 0 }
-                        };
-                    }
-                    
-                    userStats[userId].total_assessments++;
-                    userStats[userId].risk_summary[d.risk_level] = 
-                        (userStats[userId].risk_summary[d.risk_level] || 0) + 1;
-                    
-                    if (!userStats[userId].last_assessment || 
-                        new Date(d.created_at) > new Date(userStats[userId].last_assessment)) {
-                        userStats[userId].last_assessment = d.created_at;
-                    }
-                });
-                
-                const users = Object.values(userStats);
-                
-                if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-8">No users found</td></tr>';
-                    return;
-                }
-                
-                tbody.innerHTML = users.map(user => {
-                    const riskSummary = user.risk_summary || {};
-                    const riskBadges = Object.entries(riskSummary)
-                        .filter(([risk, count]) => count > 0)
-                        .map(([risk, count]) => `<span class="risk-badge risk-${risk}">${count} ${risk}</span>`)
-                        .join(' ') || '<span class="text-gray-500">No data</span>';
-                    
-                    return `
-                        <tr>
-                            <td>
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-content-center text-white font-bold">
-                                        ${(user.full_name || user.email || '?').charAt(0).toUpperCase()}
-                                    </div>
-                                    <span>${user.full_name || 'Unknown'}</span>
-                                </div>
-                            </td>
-                            <td class="text-gray-400">${user.email || 'N/A'}</td>
-                            <td>${user.total_assessments || 0}</td>
-                            <td class="text-gray-400">${user.last_assessment ? formatDate(user.last_assessment) : 'Never'}</td>
-                            <td>${riskBadges}</td>
-                            <td>
-                                <button class="view-btn" onclick="viewUserDetails('${user.id}')">
-                                    <i class="fas fa-eye mr-1"></i>View
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (error) {
-                console.error('Failed to load users:', error);
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load users</td></tr>';
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-8">No users found. Users will appear here after they sign up.</td></tr>';
+                return;
             }
+            
+            tbody.innerHTML = users.map(user => {
+                const riskSummary = user.risk_summary || {};
+                const riskBadges = Object.entries(riskSummary)
+                    .filter(([risk, count]) => count > 0)
+                    .map(([risk, count]) => `<span class="risk-badge risk-${risk}">${count} ${risk}</span>`)
+                    .join(' ') || '<span class="text-gray-500">No assessments</span>';
+                
+                const roleBadge = user.role === 'admin' 
+                    ? '<span class="text-xs bg-purple-600 px-2 py-0.5 rounded ml-2">Admin</span>' 
+                    : '';
+                
+                return `
+                    <tr data-user-id="${user.id}" data-risk="${user.max_risk}">
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                    ${(user.full_name || user.email || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <span>${user.full_name || 'Unknown'}${roleBadge}</span>
+                            </div>
+                        </td>
+                        <td class="text-gray-400">${user.email || 'N/A'}</td>
+                        <td class="text-gray-400">${user.registered_at ? formatDate(user.registered_at) : 'N/A'}</td>
+                        <td>${user.total_assessments || 0}</td>
+                        <td class="text-gray-400">${user.last_assessment ? formatDate(user.last_assessment) : 'Never'}</td>
+                        <td>${riskBadges}</td>
+                        <td>
+                            <button class="view-btn" onclick="viewUserDetails('${user.id}')">
+                                <i class="fas fa-eye mr-1"></i>View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Filter users by search term
+        function filterUsers(searchTerm) {
+            const search = searchTerm.toLowerCase();
+            const filtered = allUsersData.filter(user => 
+                (user.full_name || '').toLowerCase().includes(search) ||
+                (user.email || '').toLowerCase().includes(search)
+            );
+            renderUsersTable(filtered);
+        }
+        
+        // Filter users by risk level
+        function filterUsersByRisk(riskLevel) {
+            let filtered;
+            if (riskLevel === 'all') {
+                filtered = allUsersData;
+            } else if (riskLevel === 'none') {
+                filtered = allUsersData.filter(u => u.total_assessments === 0);
+            } else {
+                filtered = allUsersData.filter(u => u.max_risk === riskLevel || (riskLevel === 'high' && u.max_risk === 'critical'));
+            }
+            renderUsersTable(filtered);
+        }
+        
+        // Export users to CSV
+        function exportUsersCSV() {
+            if (allUsersData.length === 0) {
+                alert('No user data to export');
+                return;
+            }
+            
+            const headers = ['Name', 'Email', 'Registered', 'Assessments', 'Last Activity', 'Max Risk'];
+            const rows = allUsersData.map(u => [
+                u.full_name || 'Unknown',
+                u.email || 'N/A',
+                u.registered_at ? formatDate(u.registered_at) : 'N/A',
+                u.total_assessments || 0,
+                u.last_assessment ? formatDate(u.last_assessment) : 'Never',
+                u.max_risk || 'none'
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `medai-users-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
         
         function formatDate(dateStr) {
@@ -866,6 +1410,31 @@
                 const supabase = window.MedAISupabase.getSupabase();
                 if (!supabase) throw new Error('Supabase not initialized');
                 
+                // Try to get user profile info
+                let userInfo = allUsersData.find(u => u.id === userId);
+                if (!userInfo) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('email, full_name')
+                        .eq('id', userId)
+                        .single();
+                    userInfo = profile || { email: 'Unknown', full_name: `User ${userId.substring(0, 8)}` };
+                }
+                
+                // Update modal title with actual user info
+                const userName = userInfo.full_name || userInfo.email || `User ${userId.substring(0, 8)}`;
+                document.getElementById('modalUserName').innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                            ${userName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="text-xl font-bold">${userName}</div>
+                            <div class="text-sm text-gray-400">${userInfo.email || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+                
                 // Get user's diagnosis history
                 const { data: history, error } = await supabase
                     .from('diagnosis_results')
@@ -878,10 +1447,15 @@
                 // Calculate trends
                 const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
                 const typeCounts = {};
+                const riskHistory = [];
                 
                 history?.forEach(item => {
                     riskCounts[item.risk_level] = (riskCounts[item.risk_level] || 0) + 1;
                     typeCounts[item.diagnosis_type] = (typeCounts[item.diagnosis_type] || 0) + 1;
+                    
+                    // For trend chart
+                    const riskValue = { low: 1, medium: 2, high: 3, critical: 4 }[item.risk_level] || 0;
+                    riskHistory.push({ date: item.created_at, value: riskValue });
                 });
                 
                 const mostCommon = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
@@ -897,9 +1471,6 @@
                     health_trend: avgRisk > 2.5 ? 'needs attention' : avgRisk > 1.5 ? 'stable' : 'good',
                     average_risk: avgRisk < 1.5 ? 'Low' : avgRisk < 2.5 ? 'Medium' : 'High'
                 };
-                
-                // Update modal title
-                document.getElementById('modalUserName').textContent = `User: ${userId.substring(0, 8)}...`;
                 
                 // Render trends summary
                 const trendClass = trends.health_trend === 'good' ? 'trend-improving' : 
@@ -932,11 +1503,19 @@
                         <div class="history-item">
                             <div>
                                 <div class="font-semibold">${(item.diagnosis_type || 'unknown').charAt(0).toUpperCase() + (item.diagnosis_type || '').slice(1)}</div>
-                        <div class="text-sm text-gray-400">${formatDate(item.created_at)}</div>
+                                <div class="text-sm text-gray-400">${formatDate(item.created_at)}</div>
                             </div>
                             <span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span>
                         </div>
                     `).join('');
+                }
+                
+                // Render trend chart if there's data
+                if (riskHistory.length > 0) {
+                    renderUserTrendChart({
+                        risk_values: riskHistory.slice(0, 10).map(r => r.value),
+                        risk_labels: riskHistory.slice(0, 10).map(r => formatDate(r.date))
+                    });
                 }
                 
             } catch (err) {
@@ -1033,12 +1612,162 @@
                 // Load data for the section
                 if (this.dataset.section === 'inventory') {
                     loadInventory();
+                    initAIAgent();
+                } else if (this.dataset.section === 'orders') {
+                    loadOrders();
                 }
             });
         });
         
+        // ===== ORDERS MANAGEMENT =====
+        let allOrdersData = [];
+        
+        async function loadOrders() {
+            console.log('📦 Loading orders...');
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get all orders
+                const { data: orders, error } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                allOrdersData = orders || [];
+                console.log(`✅ Loaded ${allOrdersData.length} orders`);
+                
+                // Update stats
+                updateOrderStats(allOrdersData);
+                
+                // Render orders table
+                renderOrdersTable(allOrdersData);
+                
+            } catch (error) {
+                console.error('❌ Failed to load orders:', error);
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-400 py-8">Failed to load orders: ${error.message}</td></tr>`;
+            }
+        }
+        
+        function updateOrderStats(orders) {
+            document.getElementById('ordersTotal').textContent = orders.length;
+            
+            const pending = orders.filter(o => o.order_status === 'pending').length;
+            document.getElementById('ordersPending').textContent = pending;
+            
+            const delivered = orders.filter(o => o.order_status === 'delivered').length;
+            document.getElementById('ordersDelivered').textContent = delivered;
+            
+            const revenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            document.getElementById('ordersRevenue').textContent = `₹${revenue.toFixed(2)}`;
+        }
+        
+        function renderOrdersTable(orders) {
+            const tbody = document.getElementById('ordersTableBody');
+            
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-8">No orders found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = orders.map(order => {
+                const items = Array.isArray(order.items) ? order.items : (order.items ? JSON.parse(order.items) : []);
+                const itemCount = items.length;
+                const itemNames = items.slice(0, 2).map(i => i.name).join(', ');
+                const moreText = itemCount > 2 ? ` +${itemCount - 2} more` : '';
+                
+                const statusColors = {
+                    pending: 'text-yellow-400 bg-yellow-400/20',
+                    processing: 'text-blue-400 bg-blue-400/20',
+                    delivered: 'text-green-400 bg-green-400/20',
+                    cancelled: 'text-red-400 bg-red-400/20'
+                };
+                
+                const paymentColors = {
+                    pending: 'text-yellow-400',
+                    completed: 'text-green-400',
+                    failed: 'text-red-400'
+                };
+                
+                return `
+                    <tr>
+                        <td class="font-mono text-sm">
+                            ${order.id.substring(0, 8)}...
+                        </td>
+                        <td>
+                            <div class="text-sm">User ID: ${order.user_id.substring(0, 8)}...</div>
+                        </td>
+                        <td>
+                            <div class="text-sm">${itemNames}${moreText}</div>
+                            <div class="text-xs text-gray-500">${itemCount} item(s)</div>
+                        </td>
+                        <td class="text-green-400 font-bold">₹${parseFloat(order.total || 0).toFixed(2)}</td>
+                        <td>
+                            <div class="${paymentColors[order.payment_status] || 'text-gray-400'}">${order.payment_method || 'COD'}</div>
+                            <div class="text-xs">${order.payment_status || 'pending'}</div>
+                        </td>
+                        <td>
+                            <span class="px-2 py-1 rounded text-xs ${statusColors[order.order_status] || 'text-gray-400'}">
+                                ${order.order_status || 'pending'}
+                            </span>
+                        </td>
+                        <td class="text-gray-400 text-sm">${formatDate(order.created_at)}</td>
+                        <td>
+                            <select onchange="updateOrderStatus('${order.id}', this.value)" 
+                                    class="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm">
+                                <option value="">Update...</option>
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function filterOrders(status) {
+            if (status === 'all') {
+                renderOrdersTable(allOrdersData);
+            } else {
+                const filtered = allOrdersData.filter(o => o.order_status === status);
+                renderOrdersTable(filtered);
+            }
+        }
+        
+        async function updateOrderStatus(orderId, newStatus) {
+            if (!newStatus) return;
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                const { error } = await supabase
+                    .from('orders')
+                    .update({ 
+                        order_status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', orderId);
+                
+                if (error) throw error;
+                
+                alert(`✅ Order status updated to ${newStatus}`);
+                loadOrders(); // Reload to show updated status
+                
+            } catch (error) {
+                console.error('Error updating order:', error);
+                alert(`❌ Failed to update order: ${error.message}`);
+            }
+        }
+        
         // ===== INVENTORY MANAGEMENT =====
-        let inventoryData = [];
         
         async function loadInventory() {
             const tbody = document.getElementById('inventoryTableBody');
@@ -1164,9 +1893,12 @@
             };
             
             try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
                 if (itemId) {
                     // Update existing
-                    const { error } = await window.MedAISupabase.supabase
+                    const { error } = await supabase
                         .from('inventory')
                         .update(itemData)
                         .eq('id', itemId);
@@ -1175,7 +1907,7 @@
                     alert('✅ Item updated successfully!');
                 } else {
                     // Insert new
-                    const { error } = await window.MedAISupabase.supabase
+                    const { error } = await supabase
                         .from('inventory')
                         .insert([itemData]);
                     
@@ -1198,7 +1930,10 @@
             }
             
             try {
-                const { error } = await window.MedAISupabase.supabase
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                const { error } = await supabase
                     .from('inventory')
                     .delete()
                     .eq('id', itemId);
@@ -1218,9 +1953,364 @@
         document.getElementById('itemModal').addEventListener('click', function(e) {
             if (e.target === this) closeItemModal();
         });
+        
+        // ============================================
+        // AI AGENT FUNCTIONS
+        // ============================================
+        
+        // Initialize AI Agent on page load
+        async function initAIAgent() {
+            // Check if AI agent was previously enabled
+            const savedState = localStorage.getItem('aiAgentEnabled');
+            if (savedState === 'true') {
+                document.getElementById('aiAgentToggle').checked = true;
+                aiAgentEnabled = true;
+                startAIAgent();
+            }
+            
+            // Load AI activity log
+            await loadAIActivityLog();
+            
+            // Update AI stats
+            updateAIStats();
+        }
+        
+        // Toggle AI Agent on/off
+        function toggleAIAgent(enabled) {
+            aiAgentEnabled = enabled;
+            localStorage.setItem('aiAgentEnabled', enabled);
+            
+            if (enabled) {
+                startAIAgent();
+                addAILog('AI Agent enabled - monitoring inventory', 'success');
+            } else {
+                stopAIAgent();
+                addAILog('AI Agent disabled', 'info');
+            }
+            
+            updateAIAgentStatus();
+        }
+        
+        // Start AI Agent monitoring
+        function startAIAgent() {
+            stopAIAgent(); // Clear any existing interval
+            
+            // Run immediately
+            runAIAgent();
+            
+            // Set up periodic checking (every 5 minutes)
+            aiAgentInterval = setInterval(() => {
+                runAIAgent();
+            }, 5 * 60 * 1000); // 5 minutes
+            
+            updateAIAgentStatus();
+        }
+        
+        // Stop AI Agent
+        function stopAIAgent() {
+            if (aiAgentInterval) {
+                clearInterval(aiAgentInterval);
+                aiAgentInterval = null;
+            }
+            updateAIAgentStatus();
+        }
+        
+        // Update AI Agent status display
+        function updateAIAgentStatus() {
+            const statusEl = document.getElementById('aiAgentStatus');
+            if (aiAgentEnabled) {
+                statusEl.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i>Active - Auto-monitoring enabled';
+            } else {
+                statusEl.innerHTML = '<i class="fas fa-pause-circle text-gray-400 mr-1"></i>Inactive - Enable to start monitoring';
+            }
+        }
+        
+        // Run AI Agent analysis and actions
+        async function runAIAgent() {
+            console.log('🤖 AI Agent: Running inventory analysis...');
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get current inventory
+                const { data: inventory, error: invError } = await supabase
+                    .from('inventory')
+                    .select('*');
+                
+                if (invError) throw invError;
+                
+                inventoryData = inventory || [];
+                
+                // Analyze inventory
+                const lowStockItems = inventory.filter(item => 
+                    item.quantity > 0 && item.quantity < LOW_STOCK_THRESHOLD
+                );
+                const outOfStockItems = inventory.filter(item => 
+                    !item.quantity || item.quantity === 0
+                );
+                
+                console.log(`🤖 AI Agent: Found ${lowStockItems.length} low stock, ${outOfStockItems.length} out of stock`);
+                
+                // Auto-reorder low stock items if AI is enabled
+                if (aiAgentEnabled) {
+                    for (const item of lowStockItems) {
+                        await createAutoReorder(item);
+                    }
+                    
+                    for (const item of outOfStockItems) {
+                        await createAutoReorder(item, true);
+                    }
+                }
+                
+                // Generate AI insights
+                await generateAIInsights(inventory, lowStockItems, outOfStockItems);
+                
+                // Update stats
+                await updateAIStats();
+                
+                // Update last check time
+                document.getElementById('aiLastCheck').textContent = new Date().toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                if (lowStockItems.length > 0 || outOfStockItems.length > 0) {
+                    addAILog(
+                        `Analyzed ${inventory.length} items - ${lowStockItems.length} low stock alerts, ${outOfStockItems.length} out of stock`,
+                        'warning'
+                    );
+                } else {
+                    addAILog(`Analyzed ${inventory.length} items - all stock levels healthy`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('❌ AI Agent error:', error);
+                addAILog(`Error during analysis: ${error.message}`, 'warning');
+            }
+        }
+        
+        // Create auto-reorder for low/out of stock items
+        async function createAutoReorder(item, isUrgent = false) {
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) return;
+                
+                // Check if there's already a pending reorder for this item
+                const { data: existing } = await supabase
+                    .from('auto_reorders')
+                    .select('id')
+                    .eq('item_id', item.id)
+                    .eq('status', 'pending')
+                    .single();
+                
+                if (existing) {
+                    console.log(`🤖 AI Agent: Reorder already exists for ${item.name}`);
+                    return;
+                }
+                
+                // Calculate reorder quantity (3x threshold for normal, 5x for urgent)
+                const reorderQty = isUrgent ? AUTO_REORDER_QUANTITY * 2 : AUTO_REORDER_QUANTITY;
+                
+                // Expected delivery: 3-5 days from now
+                const expectedDelivery = new Date();
+                expectedDelivery.setDate(expectedDelivery.getDate() + (isUrgent ? 3 : 5));
+                
+                // Create auto-reorder
+                const { error } = await supabase
+                    .from('auto_reorders')
+                    .insert([{
+                        item_id: item.id,
+                        item_name: item.name,
+                        quantity: reorderQty,
+                        status: 'pending',
+                        expected_delivery: expectedDelivery.toISOString()
+                    }]);
+                
+                if (error) throw error;
+                
+                console.log(`✅ AI Agent: Created auto-reorder for ${item.name} (${reorderQty} units)`);
+                addAILog(
+                    `Auto-ordered ${reorderQty} units of "${item.name}" - Current stock: ${item.quantity || 0}`,
+                    'success'
+                );
+                
+            } catch (error) {
+                console.error('❌ AI Agent reorder error:', error);
+            }
+        }
+        
+        // Generate AI insights
+        async function generateAIInsights(inventory, lowStock, outOfStock) {
+            const insightsEl = document.getElementById('aiInsights');
+            const insights = [];
+            
+            // Stock alerts
+            if (outOfStock.length > 0) {
+                insights.push(`
+                    <div class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+                        <strong class="text-red-400">Critical:</strong> ${outOfStock.length} item(s) out of stock
+                        ${aiAgentEnabled ? ' - Auto-reorder initiated' : ' - Enable AI to auto-order'}
+                    </div>
+                `);
+            }
+            
+            if (lowStock.length > 0) {
+                insights.push(`
+                    <div class="mb-2">
+                        <i class="fas fa-exclamation-circle text-yellow-400 mr-2"></i>
+                        <strong class="text-yellow-400">Warning:</strong> ${lowStock.length} item(s) low on stock
+                        ${aiAgentEnabled ? ' - Auto-reorder scheduled' : ''}
+                    </div>
+                `);
+            }
+            
+            // Healthy stock
+            const healthyItems = inventory.filter(item => item.quantity >= LOW_STOCK_THRESHOLD);
+            if (healthyItems.length > 0 && outOfStock.length === 0 && lowStock.length === 0) {
+                insights.push(`
+                    <div class="mb-2">
+                        <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                        <strong class="text-green-400">All Good:</strong> All ${inventory.length} items have healthy stock levels
+                    </div>
+                `);
+            }
+            
+            // Predictive insights
+            const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            insights.push(`
+                <div class="mb-2">
+                    <i class="fas fa-chart-line text-blue-400 mr-2"></i>
+                    <strong>Total Inventory Value:</strong> ₹${totalValue.toFixed(2)}
+                </div>
+            `);
+            
+            // Top categories
+            const categories = {};
+            inventory.forEach(item => {
+                const cat = item.category || 'uncategorized';
+                categories[cat] = (categories[cat] || 0) + 1;
+            });
+            const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
+            if (topCategory) {
+                insights.push(`
+                    <div class="mb-2">
+                        <i class="fas fa-tags text-purple-400 mr-2"></i>
+                        <strong>Most Stocked Category:</strong> ${topCategory[0]} (${topCategory[1]} items)
+                    </div>
+                `);
+            }
+            
+            insightsEl.innerHTML = insights.join('');
+        }
+        
+        // Update AI stats
+        async function updateAIStats() {
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) return;
+                
+                // Get auto orders count
+                const { data: orders, error: ordersError } = await supabase
+                    .from('auto_reorders')
+                    .select('id, status');
+                
+                if (!ordersError) {
+                    const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0;
+                    document.getElementById('aiAutoOrders').textContent = pendingOrders;
+                }
+                
+                // Items monitored
+                document.getElementById('aiItemsMonitored').textContent = inventoryData.length;
+                
+                // Low stock alerts
+                const lowStockCount = inventoryData.filter(item => 
+                    item.quantity > 0 && item.quantity < LOW_STOCK_THRESHOLD
+                ).length + inventoryData.filter(item => !item.quantity || item.quantity === 0).length;
+                document.getElementById('aiLowStockAlerts').textContent = lowStockCount;
+                
+            } catch (error) {
+                console.error('Error updating AI stats:', error);
+            }
+        }
+        
+        // Load AI activity log
+        async function loadAIActivityLog() {
+            const logEl = document.getElementById('aiActivityLog');
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                const { data: orders, error } = await supabase
+                    .from('auto_reorders')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                
+                if (error) throw error;
+                
+                if (!orders || orders.length === 0) {
+                    logEl.innerHTML = `
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-info-circle mr-2"></i>No AI activity yet
+                        </div>
+                    `;
+                    return;
+                }
+                
+                logEl.innerHTML = orders.map(order => {
+                    const date = new Date(order.created_at);
+                    const statusClass = order.status === 'completed' ? 'ai-log-success' : 
+                                       order.status === 'pending' ? 'ai-log-warning' : 'ai-log-info';
+                    const statusIcon = order.status === 'completed' ? 'check-circle' : 
+                                      order.status === 'pending' ? 'clock' : 'info-circle';
+                    
+                    return `
+                        <div class="ai-log-item ${statusClass}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-semibold">
+                                        <i class="fas fa-${statusIcon} mr-2"></i>
+                                        Auto-ordered ${order.quantity} units of "${order.item_name}"
+                                    </div>
+                                    <div class="text-sm text-gray-400 mt-1">
+                                        ${date.toLocaleString('en-US', { 
+                                            month: 'short', 
+                                            day: 'numeric', 
+                                            hour: '2-digit', 
+                                            minute: '2-digit' 
+                                        })}
+                                        ${order.expected_delivery ? ` • Expected: ${new Date(order.expected_delivery).toLocaleDateString()}` : ''}
+                                    </div>
+                                </div>
+                                <span class="text-xs px-2 py-1 rounded" style="background: rgba(255,255,255,0.1);">
+                                    ${order.status}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading AI log:', error);
+                logEl.innerHTML = `
+                    <div class="text-center text-red-400 py-8">
+                        Failed to load activity log
+                    </div>
+                `;
+            }
+        }
+        
+        // Add entry to AI log (for real-time updates)
+        function addAILog(message, type = 'info') {
+            console.log(`🤖 AI Agent: ${message}`);
+            // Reload the activity log to show latest
+            loadAIActivityLog();
+        }
     </script>
     
-    <script src="supabase-config.js"></script>
     <script type="importmap">
     {
         "imports": {
