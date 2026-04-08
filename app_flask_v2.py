@@ -61,7 +61,7 @@ try:
     import google.generativeai as genai
     if GEMINI_API_KEY and GEMINI_API_KEY != 'your_gemini_api_key_here':
         genai.configure(api_key=GEMINI_API_KEY)
-        gemini_model = genai.GenerativeModel('gemini-pro')
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
         GEMINI_AVAILABLE = True
         print("✅ Gemini AI configured")
     else:
@@ -182,7 +182,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
         
         result = json.loads(text)
         result['ai_provider'] = 'gemini'
-        result['model'] = 'gemini-pro'
+        result['model'] = 'gemini-1.5-flash'
         return result
         
     except json.JSONDecodeError as e:
@@ -804,14 +804,21 @@ Provide JSON:
 }}"""
         
         response = gemini_model.generate_content(prompt)
-        text = response.text
+        text = response.text.strip()
         
-        # Try to extract JSON
-        import re
-        json_match = re.search(r'\{.*\}', text, re.DOTALL)
-        if json_match:
-            result = json.loads(json_match.group())
-            return result
+        # Clean markdown if present
+        if '```' in text:
+            text = text.split('```')[1] if len(text.split('```')) > 1 else text
+            text = text.replace('json', '').strip()
+            
+        import json
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            import re
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group())
     except Exception as e:
         print(f"Gemini medicine advice error: {e}")
     
