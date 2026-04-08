@@ -250,21 +250,6 @@
                 }, 2500);
             }
         });
-                
-                // Show error message
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'alert alert-danger mt-3';
-                errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${err.message || 'Connection error. Make sure Flask backend is running.'}`;
-                document.querySelector('.auth-container form').appendChild(errorDiv);
-                
-                setTimeout(() => {
-                    errorDiv.remove();
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.style.background = '';
-                    submitBtn.disabled = false;
-                }, 3000);
-            }
-        });
         
         // Entrance animation
         gsap.fromTo('.auth-container',
