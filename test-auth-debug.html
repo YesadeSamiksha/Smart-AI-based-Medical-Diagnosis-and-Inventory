@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI - Auth Debug Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover {
+            background: #218838;
+        }
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            color: #4caf50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .warning {
+            color: #ff9800;
+        }
+        .info {
+            color: #2196f3;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 MedAI Authentication Debug Tool</h1>
+        <p class="subtitle">Diagnose and fix login issues</p>
+
+        <!-- Status Check -->
+        <div class="section">
+            <h2>1️⃣ System Status</h2>
+            <button onclick="checkStatus()">Check Status</button>
+            <div id="statusOutput"></div>
+        </div>
+
+        <!-- Database Connection -->
+        <div class="section">
+            <h2>2️⃣ Database Connection</h2>
+            <button onclick="testConnection()">Test Supabase Connection</button>
+            <button class="secondary" onclick="checkTables()">Check Tables</button>
+            <div id="dbOutput"></div>
+        </div>
+
+        <!-- Authentication -->
+        <div class="section">
+            <h2>3️⃣ Authentication Tests</h2>
+            <button onclick="getCurrentSession()">Check Current Session</button>
+            <button class="secondary" onclick="checkLocalStorage()">Check Local Storage</button>
+            <button class="danger" onclick="clearAuth()">Clear Auth Data</button>
+            <div id="authOutput"></div>
+        </div>
+
+        <!-- Create Test User -->
+        <div class="section">
+            <h2>4️⃣ Create Test User</h2>
+            <input type="email" id="testEmail" placeholder="Email (e.g., test@example.com)" value="test@medai.com">
+            <input type="password" id="testPassword" placeholder="Password (min 6 chars)" value="Test@123456">
+            <input type="text" id="testName" placeholder="Full Name" value="Test User">
+            <button class="success" onclick="createTestUser()">Create User</button>
+            <button class="success" onclick="loginTestUser()">Login</button>
+            <div id="userOutput"></div>
+        </div>
+
+        <!-- Test Inventory -->
+        <div class="section">
+            <h2>5️⃣ Test Data Access</h2>
+            <button onclick="testInventory()">Load Inventory</button>
+            <button class="secondary" onclick="testProfiles()">Load Profiles</button>
+            <div id="dataOutput"></div>
+        </div>
+
+        <!-- Quick Fixes -->
+        <div class="section">
+            <h2>6️⃣ Quick Fixes</h2>
+            <button class="success" onclick="runQuickFix()">Run All Fixes</button>
+            <button class="warning" onclick="showInstructions()">Show Instructions</button>
+            <div id="fixOutput"></div>
+        </div>
+    </div>
+
+    <!-- Include Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const output = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            output.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        // 1. Check Status
+        async function checkStatus() {
+            clearOutput('statusOutput');
+            const output = document.getElementById('statusOutput');
+            
+            let html = '<div class="output">';
+            
+            // Check Supabase
+            if (window.MedAISupabase) {
+                html += '<span class="success">✅ Supabase Config: Loaded</span>\n';
+                html += `<span class="info">   URL: ${window.MedAISupabase.SUPABASE_URL}</span>\n`;
+            } else {
+                html += '<span class="error">❌ Supabase Config: Not loaded</span>\n';
+            }
+            
+            // Check Auth
+            if (window.MedAIAuth) {
+                html += '<span class="success">✅ Auth Module: Loaded</span>\n';
+            } else {
+                html += '<span class="error">❌ Auth Module: Not loaded</span>\n';
+            }
+            
+            // Check Supabase Client
+            const client = window.MedAISupabase?.getSupabase();
+            if (client) {
+                html += '<span class="success">✅ Supabase Client: Connected</span>\n';
+            } else {
+                html += '<span class="error">❌ Supabase Client: Failed to initialize</span>\n';
+            }
+            
+            html += '</div>';
+            output.innerHTML = html;
+        }
+
+        // 2. Test Connection
+        async function testConnection() {
+            clearOutput('dbOutput');
+            log('dbOutput', 'Testing Supabase connection...', 'info');
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                const { data, error } = await supabase.from('inventory').select('count');
+                
+                if (error) throw error;
+                
+                log('dbOutput', '✅ Successfully connected to Supabase!', 'success');
+                log('dbOutput', `Found inventory table`, 'success');
+            } catch (err) {
+                log('dbOutput', `❌ Connection failed: ${err.message}`, 'error');
+                log('dbOutput', 'Make sure you ran QUICK-FIX-SQL.md in Supabase!', 'warning');
+            }
+        }
+
+        async function checkTables() {
+            clearOutput('dbOutput');
+            log('dbOutput', 'Checking database tables...', 'info');
+            
+            const supabase = window.MedAISupabase.getSupabase();
+            const tables = ['profiles', 'inventory', 'orders', 'diagnosis_results', 'auto_reorders'];
+            
+            for (const table of tables) {
+                try {
+                    const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
+                    
+                    if (error) throw error;
+                    
+                    log('dbOutput', `✅ ${table}: ${count} rows`, 'success');
+                } catch (err) {
+                    log('dbOutput', `❌ ${table}: ${err.message}`, 'error');
+                }
+            }
+        }
+
+        // 3. Authentication
+        async function getCurrentSession() {
+            clearOutput('authOutput');
+            log('authOutput', 'Checking current session...', 'info');
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) throw error;
+                
+                if (session) {
+                    log('authOutput', '✅ Session found!', 'success');
+                    log('authOutput', `User: ${session.user.email}`, 'info');
+                    log('authOutput', `User ID: ${session.user.id}`, 'info');
+                    log('authOutput', `Expires: ${new Date(session.expires_at * 1000).toLocaleString()}`, 'info');
+                } else {
+                    log('authOutput', '⚠️  No active session', 'warning');
+                    log('authOutput', 'You need to login first', 'info');
+                }
+            } catch (err) {
+                log('authOutput', `❌ Error: ${err.message}`, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            clearOutput('authOutput');
+            log('authOutput', 'Checking localStorage...', 'info');
+            
+            const user = localStorage.getItem('medai_user');
+            if (user) {
+                log('authOutput', '✅ User data found in localStorage', 'success');
+                log('authOutput', JSON.stringify(JSON.parse(user), null, 2), 'info');
+            } else {
+                log('authOutput', '⚠️  No user data in localStorage', 'warning');
+            }
+            
+            const cart = localStorage.getItem('medai_cart');
+            if (cart) {
+                const items = JSON.parse(cart);
+                log('authOutput', `Cart: ${items.length} items`, 'info');
+            }
+        }
+
+        function clearAuth() {
+            clearOutput('authOutput');
+            log('authOutput', 'Clearing authentication data...', 'warning');
+            
+            localStorage.removeItem('medai_user');
+            localStorage.removeItem('medai_cart');
+            
+            log('authOutput', '✅ Auth data cleared!', 'success');
+            log('authOutput', 'Reload the page to apply changes', 'info');
+        }
+
+        // 4. Create Test User
+        async function createTestUser() {
+            clearOutput('userOutput');
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const name = document.getElementById('testName').value;
+            
+            if (!email || !password || !name) {
+                log('userOutput', '❌ Please fill all fields', 'error');
+                return;
+            }
+            
+            log('userOutput', 'Creating test user...', 'info');
+            
+            try {
+                const { data, error } = await window.MedAIAuth.signUp(email, password, name);
+                
+                if (error) throw error;
+                
+                log('userOutput', '✅ User created successfully!', 'success');
+                log('userOutput', `Email: ${email}`, 'info');
+                log('userOutput', `User ID: ${data.user.id}`, 'info');
+                log('userOutput', 'Now try logging in!', 'info');
+            } catch (err) {
+                log('userOutput', `❌ Error: ${err.message}`, 'error');
+                
+                if (err.message.includes('already registered')) {
+                    log('userOutput', '💡 User already exists, try logging in instead', 'warning');
+                }
+            }
+        }
+
+        async function loginTestUser() {
+            clearOutput('userOutput');
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            if (!email || !password) {
+                log('userOutput', '❌ Please enter email and password', 'error');
+                return;
+            }
+            
+            log('userOutput', 'Logging in...', 'info');
+            
+            try {
+                const { data, error } = await window.MedAIAuth.signIn(email, password);
+                
+                if (error) throw error;
+                
+                log('userOutput', '✅ Login successful!', 'success');
+                log('userOutput', `Email: ${data.user.email}`, 'info');
+                log('userOutput', `User ID: ${data.user.id}`, 'info');
+                log('userOutput', 'You can now go to dashboard.html!', 'success');
+            } catch (err) {
+                log('userOutput', `❌ Login failed: ${err.message}`, 'error');
+                
+                if (err.message.includes('Email not confirmed')) {
+                    log('userOutput', '💡 Email confirmation required!', 'warning');
+                    log('userOutput', 'Go to Supabase → Authentication → Providers → Email', 'info');
+                    log('userOutput', 'Uncheck "Confirm email" and try again', 'info');
+                }
+            }
+        }
+
+        // 5. Test Data Access
+        async function testInventory() {
+            clearOutput('dataOutput');
+            log('dataOutput', 'Loading inventory...', 'info');
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                const { data, error } = await supabase.from('inventory').select('*').limit(5);
+                
+                if (error) throw error;
+                
+                if (data.length > 0) {
+                    log('dataOutput', `✅ Found ${data.length} products`, 'success');
+                    data.forEach(item => {
+                        log('dataOutput', `- ${item.name}: $${item.price} (Stock: ${item.quantity})`, 'info');
+                    });
+                } else {
+                    log('dataOutput', '⚠️  No inventory data found', 'warning');
+                    log('dataOutput', 'Run QUICK-FIX-SQL.md to add sample data', 'info');
+                }
+            } catch (err) {
+                log('dataOutput', `❌ Error: ${err.message}`, 'error');
+            }
+        }
+
+        async function testProfiles() {
+            clearOutput('dataOutput');
+            log('dataOutput', 'Loading profiles...', 'info');
+            
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                const { data, error } = await supabase.from('profiles').select('email, full_name, role');
+                
+                if (error) throw error;
+                
+                if (data.length > 0) {
+                    log('dataOutput', `✅ Found ${data.length} profiles`, 'success');
+                    data.forEach(profile => {
+                        log('dataOutput', `- ${profile.full_name} (${profile.email}) - ${profile.role}`, 'info');
+                    });
+                } else {
+                    log('dataOutput', '⚠️  No profiles found', 'warning');
+                    log('dataOutput', 'Create a user first using section 4', 'info');
+                }
+            } catch (err) {
+                log('dataOutput', `❌ Error: ${err.message}`, 'error');
+            }
+        }
+
+        // 6. Quick Fixes
+        async function runQuickFix() {
+            clearOutput('fixOutput');
+            log('fixOutput', '🔧 Running diagnostic tests...', 'info');
+            
+            // Test 1: Supabase Connection
+            log('fixOutput', '\n1️⃣ Testing Supabase connection...', 'info');
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                await supabase.from('inventory').select('count', { count: 'exact', head: true });
+                log('fixOutput', '✅ Connection OK', 'success');
+            } catch (err) {
+                log('fixOutput', '❌ Connection failed', 'error');
+                log('fixOutput', '→ Run QUICK-FIX-SQL.md in Supabase', 'warning');
+            }
+            
+            // Test 2: Auth Session
+            log('fixOutput', '\n2️⃣ Checking auth session...', 'info');
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    log('fixOutput', `✅ Logged in as ${session.user.email}`, 'success');
+                } else {
+                    log('fixOutput', '⚠️  Not logged in', 'warning');
+                    log('fixOutput', '→ Use section 4 to create/login', 'info');
+                }
+            } catch (err) {
+                log('fixOutput', '❌ Auth check failed', 'error');
+            }
+            
+            // Test 3: Tables
+            log('fixOutput', '\n3️⃣ Checking database tables...', 'info');
+            const supabase = window.MedAISupabase.getSupabase();
+            let tablesOK = 0;
+            const tables = ['inventory', 'profiles', 'orders'];
+            
+            for (const table of tables) {
+                try {
+                    await supabase.from(table).select('count', { count: 'exact', head: true });
+                    tablesOK++;
+                } catch (err) {
+                    log('fixOutput', `❌ Table missing: ${table}`, 'error');
+                }
+            }
+            
+            if (tablesOK === tables.length) {
+                log('fixOutput', '✅ All tables found', 'success');
+            } else {
+                log('fixOutput', `⚠️  ${tables.length - tablesOK} tables missing`, 'warning');
+                log('fixOutput', '→ Run QUICK-FIX-SQL.md in Supabase', 'warning');
+            }
+            
+            log('fixOutput', '\n✅ Diagnostic complete!', 'success');
+        }
+
+        function showInstructions() {
+            clearOutput('fixOutput');
+            const instructions = `
+🎯 QUICK FIX STEPS:
+
+1. Go to: https://supabase.com/dashboard/project/ydhfwvlhwxhiivheepqo
+
+2. Click: SQL Editor (left sidebar)
+
+3. Copy ENTIRE content of QUICK-FIX-SQL.md
+
+4. Paste into SQL Editor
+
+5. Click: RUN
+
+6. Wait for "Success. No rows returned"
+
+7. Come back here and click "Run All Fixes"
+
+8. If tests pass, use section 4 to create a user
+
+9. Login with the credentials
+
+10. Go to dashboard.html
+
+That's it! Your system should work now. 🎉
+
+💡 Most common issue: Email confirmation enabled
+   → Supabase → Authentication → Providers → Email
+   → UNCHECK "Confirm email"
+            `.trim();
+            
+            log('fixOutput', instructions, 'info');
+        }
+    </script>
+</body>
+</html>

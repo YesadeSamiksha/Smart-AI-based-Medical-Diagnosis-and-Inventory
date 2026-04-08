@@ -416,7 +416,12 @@
         
         async function loadProducts() {
             try {
-                const { data, error } = await window.MedAISupabase.supabase
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) {
+                    throw new Error('Supabase not initialized');
+                }
+                
+                const { data, error } = await supabase
                     .from('inventory')
                     .select('*')
                     .order('name');
@@ -424,14 +429,16 @@
                 if (error) throw error;
                 
                 allProducts = data || [];
+                console.log('✅ Loaded products:', allProducts.length);
                 renderProducts(allProducts);
                 
             } catch (error) {
-                console.error('Failed to load products:', error);
+                console.error('❌ Failed to load products:', error);
                 document.getElementById('productsGrid').innerHTML = `
                     <div class="col-span-full text-center py-12 text-red-400">
                         <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                        <p>Failed to load products. Please try again.</p>
+                        <p>Failed to load products: ${error.message}</p>
+                        <p class="text-sm mt-2">Please make sure you ran QUICK-FIX-SQL.md in Supabase</p>
                     </div>
                 `;
             }
@@ -671,13 +678,9 @@
                 return;
             }
             
-            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 50;
-            
-            if (confirm(`Proceed to checkout?\n\nTotal: ₹${total.toFixed(2)}\n\nThis is a demo - no actual payment will be processed.`)) {
-                alert('✅ Order placed successfully!\n\nThank you for your order. This is a demo system.');
-                cart = [];
-                saveCart();
-                renderCart();
+            // Redirect to checkout page
+            window.location.href = 'checkout.html';
+        }
                 toggleCart();
             }
         }

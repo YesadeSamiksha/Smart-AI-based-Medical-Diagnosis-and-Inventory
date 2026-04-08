@@ -1012,7 +1012,10 @@
             tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
             
             try {
-                const { data, error } = await window.MedAISupabase.supabase
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                const { data, error } = await supabase
                     .from('inventory')
                     .select('*')
                     .order('name');
@@ -1020,12 +1023,13 @@
                 if (error) throw error;
                 
                 inventoryData = data || [];
+                console.log('✅ Loaded inventory:', inventoryData.length, 'items');
                 renderInventory(inventoryData);
                 updateInventoryStats(inventoryData);
                 
             } catch (error) {
-                console.error('Failed to load inventory:', error);
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load inventory</td></tr>';
+                console.error('❌ Failed to load inventory:', error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load inventory: ${error.message}</td></tr>`;
             }
         }
         

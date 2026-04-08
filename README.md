@@ -2,6 +2,25 @@
 
 🏥 **MedAI** - An AI-powered medical diagnosis platform with inventory management capabilities.
 
+---
+
+## 🚨 **QUICK FIX FOR LOGIN ISSUES**
+
+**Getting "Auth session missing" error?**
+
+👉 **Read**: [COMPLETE-FIX.md](COMPLETE-FIX.md) (5-minute fix!)
+
+**Quick Steps:**
+1. Open [Supabase Dashboard](https://supabase.com/dashboard/project/ydhfwvlhwxhiivheepqo)
+2. SQL Editor → Run [QUICK-FIX-SQL.md](QUICK-FIX-SQL.md)
+3. Authentication → Providers → Email → Uncheck "Confirm email"
+4. Open `test-auth-debug.html` to verify setup
+5. Create user & login!
+
+**Debug Tool**: Open `test-auth-debug.html` in your browser to diagnose issues
+
+---
+
 ## Features
 
 - 🩺 **AI-Powered Diagnosis**: Get instant health assessments for:
