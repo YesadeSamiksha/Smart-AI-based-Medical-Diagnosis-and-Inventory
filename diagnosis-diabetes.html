@@ -9,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -123,9 +127,9 @@
     
     <div class="diagnosis-container" style="position: relative; z-index: 1;">
         <!-- Back Button -->
-        <a href="index.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+        <a href="dashboard.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
             <i class="fas fa-arrow-left"></i>
-            <span>Back to Home</span>
+            <span>Back to Dashboard</span>
         </a>
         
         <!-- Main Card -->
@@ -194,6 +198,11 @@
     </div>
     
     <script>
+        // Initialize Supabase
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MedAISupabase.initSupabase();
+        });
+        
         document.getElementById('diabetesForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -214,11 +223,35 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
             btn.disabled = true;
             
-            // Simulate AI analysis (replace with actual API call)
+            // Simulate AI analysis
             await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Calculate risk (simplified algorithm for demo)
             const riskScore = calculateDiabetesRisk(formData);
+            
+            // Determine risk level for database
+            let riskLevel;
+            if (riskScore >= 10) {
+                riskLevel = 'high';
+            } else if (riskScore >= 6) {
+                riskLevel = 'medium';
+            } else {
+                riskLevel = 'low';
+            }
+            
+            // Save to Supabase
+            const resultData = {
+                score: riskScore,
+                riskLevel: riskLevel,
+                recommendations: getRiskRecommendations(riskLevel)
+            };
+            
+            try {
+                await window.MedAIDatabase.saveDiagnosisResult('diabetes', formData, resultData, riskLevel);
+                console.log('✅ Diabetes assessment saved to database');
+            } catch (err) {
+                console.error('Error saving assessment:', err);
+            }
             
             // Display results
             displayResults(riskScore);
@@ -258,6 +291,33 @@
             else if (data.diabetesPedigree > 0.5) score += 1;
             
             return score;
+        }
+        
+        function getRiskRecommendations(riskLevel) {
+            const recommendations = {
+                high: [
+                    'Consult with an endocrinologist immediately',
+                    'Get a comprehensive metabolic panel done',
+                    'Start monitoring blood glucose daily',
+                    'Consider dietary changes (reduce carbs and sugar)',
+                    'Increase physical activity to at least 30 mins/day'
+                ],
+                medium: [
+                    'Schedule a check-up with your doctor',
+                    'Monitor your blood glucose periodically',
+                    'Maintain a healthy diet with whole grains and vegetables',
+                    'Exercise regularly (150 mins/week recommended)',
+                    'Manage stress and get adequate sleep'
+                ],
+                low: [
+                    'Continue your healthy lifestyle habits',
+                    'Annual health check-ups recommended',
+                    'Stay physically active',
+                    'Maintain a balanced diet',
+                    'Keep stress levels in check'
+                ]
+            };
+            return recommendations[riskLevel] || recommendations.low;
         }
         
         function displayResults(score) {
@@ -327,6 +387,11 @@
             resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">

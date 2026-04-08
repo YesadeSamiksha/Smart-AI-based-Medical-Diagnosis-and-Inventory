@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test - MedAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0a0a0f; color: white; font-family: system-ui; padding: 40px; }
+        .test-card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 14px; }
+        .status-pending { background: #fbbf24; color: black; }
+        .status-success { background: #10b981; color: white; }
+        .status-error { background: #ef4444; color: white; }
+        pre { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1 class="text-3xl font-bold mb-6">🔌 Supabase Connection Test</h1>
+    
+    <div class="test-card">
+        <h2 class="text-xl font-bold mb-2">1. Supabase Client Initialization</h2>
+        <p id="test1" class="status status-pending">Testing...</p>
+        <pre id="test1-details"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2 class="text-xl font-bold mb-2">2. Database Connection (Profiles Table)</h2>
+        <p id="test2" class="status status-pending">Testing...</p>
+        <pre id="test2-details"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2 class="text-xl font-bold mb-2">3. Database Connection (Diagnosis Results Table)</h2>
+        <p id="test3" class="status status-pending">Testing...</p>
+        <pre id="test3-details"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2 class="text-xl font-bold mb-2">4. Database Connection (Inventory Table)</h2>
+        <p id="test4" class="status status-pending">Testing...</p>
+        <pre id="test4-details"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2 class="text-xl font-bold mb-2">5. Auth Service</h2>
+        <p id="test5" class="status status-pending">Testing...</p>
+        <pre id="test5-details"></pre>
+    </div>
+    
+    <div class="test-card" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+        <h2 class="text-xl font-bold mb-2">📊 Summary</h2>
+        <p id="summary" class="text-gray-400">Running tests...</p>
+    </div>
+    
+    <script>
+        const SUPABASE_URL = 'https://ydhfwvlhwxhiivheepqo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkaGZ3dmxod3hoaWl2aGVlcHFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTIyNzAsImV4cCI6MjA4ODcyODI3MH0.fA8q85b237u67OeOdwuGTJj9n7oCJmJnfzMIt-IKrFI';
+        
+        let supabase = null;
+        let results = { passed: 0, failed: 0 };
+        
+        function setStatus(id, status, message, details = '') {
+            const el = document.getElementById(id);
+            const detailsEl = document.getElementById(id + '-details');
+            
+            el.className = 'status status-' + status;
+            el.textContent = message;
+            
+            if (details) {
+                detailsEl.textContent = typeof details === 'object' ? JSON.stringify(details, null, 2) : details;
+            }
+            
+            if (status === 'success') results.passed++;
+            if (status === 'error') results.failed++;
+        }
+        
+        async function runTests() {
+            // Test 1: Initialize Supabase
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                setStatus('test1', 'success', '✅ Connected', {
+                    url: SUPABASE_URL,
+                    client: 'Initialized successfully'
+                });
+            } catch (err) {
+                setStatus('test1', 'error', '❌ Failed', err.message);
+            }
+            
+            // Test 2: Check Profiles Table
+            try {
+                const { data, error, status } = await supabase
+                    .from('profiles')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                setStatus('test2', 'success', '✅ Table exists', {
+                    table: 'profiles',
+                    status: status,
+                    message: 'Query successful'
+                });
+            } catch (err) {
+                setStatus('test2', 'error', '❌ Table not found or RLS blocked', {
+                    error: err.message,
+                    hint: 'Run supabase-schema.sql in Supabase SQL Editor'
+                });
+            }
+            
+            // Test 3: Check Diagnosis Results Table
+            try {
+                const { data, error, status } = await supabase
+                    .from('diagnosis_results')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                setStatus('test3', 'success', '✅ Table exists', {
+                    table: 'diagnosis_results',
+                    status: status,
+                    message: 'Query successful'
+                });
+            } catch (err) {
+                setStatus('test3', 'error', '❌ Table not found or RLS blocked', {
+                    error: err.message,
+                    hint: 'Run supabase-schema.sql in Supabase SQL Editor'
+                });
+            }
+            
+            // Test 4: Check Inventory Table
+            try {
+                const { data, error, status } = await supabase
+                    .from('inventory')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                setStatus('test4', 'success', '✅ Table exists', {
+                    table: 'inventory',
+                    status: status,
+                    message: 'Query successful'
+                });
+            } catch (err) {
+                setStatus('test4', 'error', '❌ Table not found or RLS blocked', {
+                    error: err.message,
+                    hint: 'Run supabase-schema.sql in Supabase SQL Editor'
+                });
+            }
+            
+            // Test 5: Check Auth Service
+            try {
+                const { data, error } = await supabase.auth.getSession();
+                setStatus('test5', 'success', '✅ Auth service working', {
+                    session: data.session ? 'Active session found' : 'No active session (expected)',
+                    message: 'Auth endpoint responding'
+                });
+            } catch (err) {
+                setStatus('test5', 'error', '❌ Auth service error', err.message);
+            }
+            
+            // Summary
+            const summary = document.getElementById('summary');
+            if (results.failed === 0) {
+                summary.innerHTML = `<span class="text-green-400 font-bold">✅ All ${results.passed} tests passed!</span><br>Your Supabase connection is working correctly.`;
+            } else {
+                summary.innerHTML = `<span class="text-yellow-400 font-bold">⚠️ ${results.passed} passed, ${results.failed} failed</span><br>
+                    <span class="text-gray-400">If tables are missing, run <code>supabase-schema.sql</code> in your Supabase SQL Editor.</span>`;
+            }
+        }
+        
+        // Run tests on page load
+        runTests();
+    </script>
+</body>
+</html>

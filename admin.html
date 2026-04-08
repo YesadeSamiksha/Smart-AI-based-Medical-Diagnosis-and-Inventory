@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -145,18 +149,18 @@
         <!-- Stats Grid -->
         <div class="admin-grid">
             <div class="admin-card">
-                <div class="stat-big text-blue-400">2,847</div>
+                <div class="stat-big text-blue-400" id="totalUsers">0</div>
                 <div class="stat-label">Total Users</div>
-                <div class="mt-2 text-sm text-green-400">
-                    <i class="fas fa-arrow-up mr-1"></i>+12.5% this month
+                <div class="mt-2 text-sm text-gray-400">
+                    Registered users
                 </div>
             </div>
             
             <div class="admin-card">
-                <div class="stat-big text-purple-400">15,392</div>
+                <div class="stat-big text-purple-400" id="totalDiagnosis">0</div>
                 <div class="stat-label">Diagnoses Completed</div>
-                <div class="mt-2 text-sm text-green-400">
-                    <i class="fas fa-arrow-up mr-1"></i>+8.3% this week
+                <div class="mt-2 text-sm text-gray-400">
+                    All time
                 </div>
             </div>
             
@@ -169,10 +173,10 @@
             </div>
             
             <div class="admin-card">
-                <div class="stat-big text-yellow-400">247</div>
+                <div class="stat-big text-yellow-400" id="inventoryItems">0</div>
                 <div class="stat-label">Inventory Items</div>
-                <div class="mt-2 text-sm text-red-400">
-                    <i class="fas fa-exclamation-circle mr-1"></i>12 low stock
+                <div class="mt-2 text-sm text-red-400" id="lowStockAlert">
+                    <i class="fas fa-exclamation-circle mr-1"></i>0 low stock
                 </div>
             </div>
         </div>
@@ -190,41 +194,13 @@
             <!-- Recent Activity -->
             <div class="admin-card">
                 <h3 class="text-2xl font-bold mb-4">Recent Activity</h3>
-                <ul class="activity-list">
+                <ul class="activity-list" id="activityList">
                     <li class="activity-item">
-                        <div class="activity-icon bg-blue-500 bg-opacity-20">
-                            <i class="fas fa-user-plus text-blue-400"></i>
+                        <div class="activity-icon bg-gray-500 bg-opacity-20">
+                            <i class="fas fa-spinner fa-spin text-gray-400"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-semibold">New user registered</div>
-                            <div class="text-sm text-gray-400">2 minutes ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-icon bg-green-500 bg-opacity-20">
-                            <i class="fas fa-heartbeat text-green-400"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-semibold">Diabetes test completed</div>
-                            <div class="text-sm text-gray-400">15 minutes ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-icon bg-yellow-500 bg-opacity-20">
-                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-semibold">Low stock alert</div>
-                            <div class="text-sm text-gray-400">1 hour ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-icon bg-purple-500 bg-opacity-20">
-                            <i class="fas fa-cog text-purple-400"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-semibold">System maintenance</div>
-                            <div class="text-sm text-gray-400">3 hours ago</div>
+                            <div class="font-semibold">Loading...</div>
                         </div>
                     </li>
                 </ul>
@@ -264,77 +240,173 @@
     </div>
     
     <script>
-        // Check admin authentication
-        const userRole = localStorage.getItem('userRole');
+        // Initialize Supabase and load stats
+        document.addEventListener('DOMContentLoaded', async function() {
+            window.MedAISupabase.initSupabase();
+            
+            // Check admin authentication
+            const user = JSON.parse(localStorage.getItem('medai_user') || '{}');
+            
+            if (user.role !== 'admin') {
+                alert('Access denied. Admin privileges required.');
+                window.location.href = 'login-admin.html';
+                return;
+            }
+            
+            await loadAdminStats();
+            await loadRecentActivity();
+            initChart();
+        });
         
-        if (userRole !== 'admin') {
-            // Not admin, redirect
-            alert('Access denied. Admin privileges required.');
-            window.location.href = 'login-admin.html';
+        async function loadAdminStats() {
+            try {
+                const { data, error } = await window.MedAIDatabase.getAdminStats();
+                
+                if (data) {
+                    document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+                    document.getElementById('totalDiagnosis').textContent = data.totalDiagnosis || 0;
+                    document.getElementById('inventoryItems').textContent = data.inventory?.total || 0;
+                    document.getElementById('lowStockAlert').innerHTML = 
+                        `<i class="fas fa-exclamation-circle mr-1"></i>${data.inventory?.lowStock || 0} low stock`;
+                }
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            }
         }
         
-        // Display admin info
-        const adminName = localStorage.getItem('userName') || 'Administrator';
-        console.log('Admin logged in:', adminName);
+        async function loadRecentActivity() {
+            try {
+                const { data, error } = await window.MedAIDatabase.getAllDiagnosis(5);
+                
+                const activityList = document.getElementById('activityList');
+                
+                if (data && data.length > 0) {
+                    activityList.innerHTML = data.map(item => {
+                        const icons = {
+                            'diabetes': { icon: 'fa-tint', color: 'pink' },
+                            'lung': { icon: 'fa-lungs', color: 'blue' },
+                            'bp': { icon: 'fa-heart-pulse', color: 'red' },
+                            'symptoms': { icon: 'fa-stethoscope', color: 'purple' }
+                        };
+                        const config = icons[item.diagnosis_type] || { icon: 'fa-clipboard', color: 'gray' };
+                        const userName = item.profiles?.full_name || item.profiles?.email || 'Unknown user';
+                        const typeName = {
+                            'diabetes': 'Diabetes assessment',
+                            'lung': 'Lung screening',
+                            'bp': 'BP analysis',
+                            'symptoms': 'Symptom check'
+                        }[item.diagnosis_type] || item.diagnosis_type;
+                        
+                        return `
+                            <li class="activity-item">
+                                <div class="activity-icon bg-${config.color}-500 bg-opacity-20">
+                                    <i class="fas ${config.icon} text-${config.color}-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-semibold">${typeName}</div>
+                                    <div class="text-sm text-gray-400">${userName} - ${formatTimeAgo(item.created_at)}</div>
+                                </div>
+                            </li>
+                        `;
+                    }).join('');
+                } else {
+                    activityList.innerHTML = `
+                        <li class="activity-item">
+                            <div class="activity-icon bg-gray-500 bg-opacity-20">
+                                <i class="fas fa-info text-gray-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-semibold">No recent activity</div>
+                            </div>
+                        </li>
+                    `;
+                }
+            } catch (err) {
+                console.error('Error loading activity:', err);
+            }
+        }
         
-        // Usage Chart (keep existing chart code)
-        const ctx = document.getElementById('usageChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{
-                    label: 'Diabetes Tests',
-                    data: [65, 78, 90, 81, 95, 102, 88],
-                    borderColor: '#f9a8d4',
-                    backgroundColor: 'rgba(249, 168, 212, 0.1)',
-                    tension: 0.4
-                }, {
-                    label: 'Lung Scans',
-                    data: [45, 52, 48, 63, 70, 68, 75],
-                    borderColor: '#93c5fd',
-                    backgroundColor: 'rgba(147, 197, 253, 0.1)',
-                    tension: 0.4
-                }, {
-                    label: 'BP Checks',
-                    data: [85, 92, 88, 95, 110, 105, 98],
-                    borderColor: '#fca5a5',
-                    backgroundColor: 'rgba(252, 165, 165, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#ffffff'
-                        }
-                    }
+        function formatTimeAgo(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+            return `${Math.floor(seconds / 86400)} days ago`;
+        }
+        
+        function initChart() {
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Diabetes Tests',
+                        data: [65, 78, 90, 81, 95, 102, 88],
+                        borderColor: '#f9a8d4',
+                        backgroundColor: 'rgba(249, 168, 212, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Lung Scans',
+                        data: [45, 52, 48, 63, 70, 68, 75],
+                        borderColor: '#93c5fd',
+                        backgroundColor: 'rgba(147, 197, 253, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'BP Checks',
+                        data: [85, 92, 88, 95, 110, 105, 98],
+                        borderColor: '#fca5a5',
+                        backgroundColor: 'rgba(252, 165, 165, 0.1)',
+                        tension: 0.4
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#9ca3af'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
                         }
                     },
-                    x: {
-                        ticks: {
-                            color: '#9ca3af'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#9ca3af'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                        x: {
+                            ticks: {
+                                color: '#9ca3af'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+        
+        async function logout() {
+            await window.MedAIAuth.signOut();
+            window.location.href = 'index.html';
+        }
     </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
+    <script src="inventory-db.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">

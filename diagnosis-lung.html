@@ -9,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -146,9 +150,9 @@
     
     <div class="diagnosis-container" style="position: relative; z-index: 1;">
         <!-- Back Button -->
-        <a href="index.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+        <a href="dashboard.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
             <i class="fas fa-arrow-left"></i>
-            <span>Back to Home</span>
+            <span>Back to Dashboard</span>
         </a>
         
         <!-- Main Card -->
@@ -262,6 +266,11 @@
     </div>
     
     <script>
+        // Initialize Supabase
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MedAISupabase.initSupabase();
+        });
+        
         // File upload handling
         document.getElementById('ctScan').addEventListener('change', function(e) {
             const fileName = e.target.files[0]?.name;
@@ -296,6 +305,30 @@
             
             // Calculate risk
             const riskScore = calculateLungCancerRisk(formData);
+            
+            // Determine risk level for database
+            let riskLevel;
+            if (riskScore >= 12) {
+                riskLevel = 'high';
+            } else if (riskScore >= 6) {
+                riskLevel = 'medium';
+            } else {
+                riskLevel = 'low';
+            }
+            
+            // Save to Supabase
+            const resultData = {
+                score: riskScore,
+                riskLevel: riskLevel,
+                recommendations: getLungRecommendations(riskLevel)
+            };
+            
+            try {
+                await window.MedAIDatabase.saveDiagnosisResult('lung', formData, resultData, riskLevel);
+                console.log('✅ Lung cancer screening saved to database');
+            } catch (err) {
+                console.error('Error saving assessment:', err);
+            }
             
             // Display results
             displayResults(riskScore, formData);
@@ -336,6 +369,33 @@
             if (data.familyHistory === 'yes') score += 2;
             
             return score;
+        }
+        
+        function getLungRecommendations(riskLevel) {
+            const recommendations = {
+                high: [
+                    'Schedule an appointment with a pulmonologist immediately',
+                    'Get a low-dose CT scan for proper diagnosis',
+                    'If you smoke, seek cessation support NOW',
+                    'Consider genetic counseling if family history present',
+                    'Document all symptoms with dates and severity'
+                ],
+                medium: [
+                    'Consult with your doctor about low-dose CT screening',
+                    'If you smoke, make a plan to quit',
+                    'Annual chest X-rays may be recommended',
+                    'Monitor for new or worsening symptoms',
+                    'Consider lung health supplements (ask your doctor)'
+                ],
+                low: [
+                    'Maintain smoke-free environment',
+                    'Avoid secondhand smoke exposure',
+                    'Regular exercise for lung health',
+                    'Annual health check-ups',
+                    'Be aware of radon and air quality at home'
+                ]
+            };
+            return recommendations[riskLevel] || recommendations.low;
         }
         
         function displayResults(score, data) {
@@ -405,6 +465,11 @@
             resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">

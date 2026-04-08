@@ -17,6 +17,9 @@
     <!-- GSAP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
     
@@ -251,7 +254,26 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    
     <script>
+        // Initialize Supabase on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MedAISupabase.initSupabase();
+            
+            // Check if already logged in
+            checkExistingSession();
+        });
+        
+        async function checkExistingSession() {
+            const isAuth = await window.MedAIAuth.checkAuthState();
+            if (isAuth) {
+                window.location.href = 'dashboard.html';
+            }
+        }
+        
         // Tab Switching
         function showTab(tab) {
             const loginTab = document.getElementById('loginTab');
@@ -277,37 +299,109 @@
             showTab('signup');
         }
         
+        // Show loading state on button
+        function setButtonLoading(btn, loading) {
+            if (loading) {
+                btn.dataset.originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Please wait...';
+                btn.disabled = true;
+            } else {
+                btn.innerHTML = btn.dataset.originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        // Show error message
+        function showError(message) {
+            alert(message);
+        }
+        
         // Handle Login
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            // Store user session (demo)
-            localStorage.setItem('medai_user', JSON.stringify({
-                email: this.querySelector('input[type="email"]').value,
-                loggedIn: true
-            }));
-            // Redirect to dashboard
-            window.location.href = 'dashboard.html';
+            
+            const email = this.querySelector('input[type="email"]').value;
+            const password = this.querySelector('input[type="password"]').value;
+            const btn = this.querySelector('button[type="submit"]');
+            
+            setButtonLoading(btn, true);
+            
+            try {
+                const { data, error } = await window.MedAIAuth.signIn(email, password);
+                
+                if (error) {
+                    showError(error.message || 'Login failed. Please check your credentials.');
+                    setButtonLoading(btn, false);
+                    return;
+                }
+                
+                // Redirect to dashboard
+                window.location.href = 'dashboard.html';
+            } catch (err) {
+                showError('An unexpected error occurred. Please try again.');
+                setButtonLoading(btn, false);
+            }
         });
         
         // Handle Signup
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            const fullName = this.querySelector('input[type="text"]').value;
+            const email = this.querySelector('input[type="email"]').value;
             const password = this.querySelectorAll('input[type="password"]')[0].value;
             const confirmPassword = this.querySelectorAll('input[type="password"]')[1].value;
+            const btn = this.querySelector('button[type="submit"]');
             
             if (password !== confirmPassword) {
-                alert('Passwords do not match!');
+                showError('Passwords do not match!');
                 return;
             }
             
-            // Store user session (demo)
-            localStorage.setItem('medai_user', JSON.stringify({
-                name: this.querySelector('input[type="text"]').value,
-                email: this.querySelector('input[type="email"]').value,
-                loggedIn: true
-            }));
-            // Redirect to dashboard
-            window.location.href = 'dashboard.html';
+            if (password.length < 6) {
+                showError('Password must be at least 6 characters long.');
+                return;
+            }
+            
+            setButtonLoading(btn, true);
+            
+            try {
+                const { data, error } = await window.MedAIAuth.signUp(email, password, fullName);
+                
+                if (error) {
+                    showError(error.message || 'Registration failed. Please try again.');
+                    setButtonLoading(btn, false);
+                    return;
+                }
+                
+                // Check if email confirmation is required
+                if (data.user && !data.session) {
+                    alert('Registration successful! Please check your email to confirm your account.');
+                    showTab('login');
+                    setButtonLoading(btn, false);
+                } else {
+                    // Auto logged in
+                    window.location.href = 'dashboard.html';
+                }
+            } catch (err) {
+                showError('An unexpected error occurred. Please try again.');
+                setButtonLoading(btn, false);
+            }
+        });
+        
+        // Handle Google Login
+        async function loginWithGoogle() {
+            const { data, error } = await window.MedAIAuth.signInWithGoogle();
+            if (error) {
+                showError(error.message || 'Google login failed.');
+            }
+        }
+        
+        // Add click handlers for social buttons
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            if (btn.innerHTML.includes('Google')) {
+                btn.onclick = loginWithGoogle;
+            }
         });
     </script>
     

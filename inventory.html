@@ -9,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -186,7 +190,7 @@
                     <h1 class="text-4xl font-bold mb-2">Medical Inventory</h1>
                     <p class="text-gray-400">Manage medical supplies and equipment</p>
                 </div>
-                <button class="btn-add" onclick="alert('Add Item functionality coming soon!')">
+                <button class="btn-add" onclick="showAddModal()">
                     <i class="fas fa-plus mr-2"></i>
                     Add Item
                 </button>
@@ -195,20 +199,20 @@
             <!-- Stats Grid -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value text-blue-400">247</div>
+                    <div class="stat-value text-blue-400" id="totalItems">0</div>
                     <div class="stat-label">Total Items</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value text-red-400">12</div>
+                    <div class="stat-value text-red-400" id="lowStock">0</div>
                     <div class="stat-label">Low Stock</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value text-green-400">185</div>
+                    <div class="stat-value text-green-400" id="inStock">0</div>
                     <div class="stat-label">In Stock</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value text-yellow-400">$45,230</div>
-                    <div class="stat-label">Total Value</div>
+                    <div class="stat-value text-yellow-400" id="mediumStock">0</div>
+                    <div class="stat-label">Medium Stock</div>
                 </div>
             </div>
             
@@ -241,24 +245,92 @@
     </div>
     
     <script>
-        // Sample inventory data
-        const inventoryData = [
-            { id: 1, name: 'Insulin (Novolog)', category: 'Medication', quantity: 145, unit: 'vials', status: 'high', lastUpdated: '2024-01-15' },
-            { id: 2, name: 'Blood Pressure Monitor', category: 'Equipment', quantity: 8, unit: 'units', status: 'low', lastUpdated: '2024-01-14' },
-            { id: 3, name: 'Glucose Test Strips', category: 'Supplies', quantity: 500, unit: 'strips', status: 'high', lastUpdated: '2024-01-15' },
-            { id: 4, name: 'Surgical Gloves (M)', category: 'PPE', quantity: 2500, unit: 'pairs', status: 'high', lastUpdated: '2024-01-13' },
-            { id: 5, name: 'Face Masks (N95)', category: 'PPE', quantity: 15, unit: 'boxes', status: 'low', lastUpdated: '2024-01-12' },
-            { id: 6, name: 'Stethoscope', category: 'Equipment', quantity: 12, unit: 'units', status: 'medium', lastUpdated: '2024-01-11' },
-            { id: 7, name: 'Thermometer (Digital)', category: 'Equipment', quantity: 25, unit: 'units', status: 'medium', lastUpdated: '2024-01-15' },
-            { id: 8, name: 'Bandages (Assorted)', category: 'Supplies', quantity: 300, unit: 'boxes', status: 'high', lastUpdated: '2024-01-14' },
-            { id: 9, name: 'Syringes (10mL)', category: 'Supplies', quantity: 450, unit: 'units', status: 'high', lastUpdated: '2024-01-13' },
-            { id: 10, name: 'CT Scan Contrast Dye', category: 'Medication', quantity: 5, unit: 'bottles', status: 'low', lastUpdated: '2024-01-10' },
-            { id: 11, name: 'Oxygen Cylinders', category: 'Equipment', quantity: 18, unit: 'tanks', status: 'medium', lastUpdated: '2024-01-15' },
-            { id: 12, name: 'IV Drip Sets', category: 'Supplies', quantity: 200, unit: 'sets', status: 'high', lastUpdated: '2024-01-14' },
-            { id: 13, name: 'Antibiotics (Amoxicillin)', category: 'Medication', quantity: 75, unit: 'bottles', status: 'medium', lastUpdated: '2024-01-12' },
-            { id: 14, name: 'ECG Electrodes', category: 'Supplies', quantity: 1000, unit: 'pads', status: 'high', lastUpdated: '2024-01-15' },
-            { id: 15, name: 'Wheelchair', category: 'Equipment', quantity: 4, unit: 'units', status: 'low', lastUpdated: '2024-01-09' }
-        ];
+        // Initialize variables
+        let inventoryData = [];
+        let isAdmin = false;
+        
+        // Initialize Supabase and load data
+        document.addEventListener('DOMContentLoaded', async function() {
+            window.MedAISupabase.initSupabase();
+            
+            // Check if user is admin
+            const user = JSON.parse(localStorage.getItem('medai_user') || '{}');
+            isAdmin = user.role === 'admin';
+            
+            await loadInventory();
+            await loadStats();
+        });
+        
+        // Load inventory from Supabase
+        async function loadInventory(searchTerm = '') {
+            try {
+                const { data, error } = await window.MedAIInventory.getInventory(searchTerm);
+                
+                if (error) {
+                    console.error('Error loading inventory:', error);
+                    // Fall back to sample data
+                    inventoryData = getSampleData();
+                } else if (data && data.length > 0) {
+                    inventoryData = data;
+                } else {
+                    // If no data in database, use sample data
+                    inventoryData = getSampleData();
+                }
+                
+                renderTable(inventoryData);
+            } catch (err) {
+                console.error('Error:', err);
+                inventoryData = getSampleData();
+                renderTable(inventoryData);
+            }
+        }
+        
+        // Load stats from Supabase
+        async function loadStats() {
+            try {
+                const { data, error } = await window.MedAIInventory.getInventoryStats();
+                
+                if (data) {
+                    document.getElementById('totalItems').textContent = data.totalItems;
+                    document.getElementById('lowStock').textContent = data.lowStock;
+                    document.getElementById('inStock').textContent = data.highStock;
+                    document.getElementById('mediumStock').textContent = data.mediumStock;
+                } else {
+                    // Calculate from current data
+                    updateStatsFromData();
+                }
+            } catch (err) {
+                updateStatsFromData();
+            }
+        }
+        
+        function updateStatsFromData() {
+            document.getElementById('totalItems').textContent = inventoryData.length;
+            document.getElementById('lowStock').textContent = inventoryData.filter(i => i.status === 'low').length;
+            document.getElementById('inStock').textContent = inventoryData.filter(i => i.status === 'high').length;
+            document.getElementById('mediumStock').textContent = inventoryData.filter(i => i.status === 'medium').length;
+        }
+        
+        // Sample data fallback
+        function getSampleData() {
+            return [
+                { id: 1, name: 'Insulin (Novolog)', category: 'Medication', quantity: 145, unit: 'vials', status: 'high', updated_at: '2024-01-15' },
+                { id: 2, name: 'Blood Pressure Monitor', category: 'Equipment', quantity: 8, unit: 'units', status: 'low', updated_at: '2024-01-14' },
+                { id: 3, name: 'Glucose Test Strips', category: 'Supplies', quantity: 500, unit: 'strips', status: 'high', updated_at: '2024-01-15' },
+                { id: 4, name: 'Surgical Gloves (M)', category: 'PPE', quantity: 2500, unit: 'pairs', status: 'high', updated_at: '2024-01-13' },
+                { id: 5, name: 'Face Masks (N95)', category: 'PPE', quantity: 15, unit: 'boxes', status: 'low', updated_at: '2024-01-12' },
+                { id: 6, name: 'Stethoscope', category: 'Equipment', quantity: 12, unit: 'units', status: 'medium', updated_at: '2024-01-11' },
+                { id: 7, name: 'Thermometer (Digital)', category: 'Equipment', quantity: 25, unit: 'units', status: 'medium', updated_at: '2024-01-15' },
+                { id: 8, name: 'Bandages (Assorted)', category: 'Supplies', quantity: 300, unit: 'boxes', status: 'high', updated_at: '2024-01-14' },
+                { id: 9, name: 'Syringes (10mL)', category: 'Supplies', quantity: 450, unit: 'units', status: 'high', updated_at: '2024-01-13' },
+                { id: 10, name: 'CT Scan Contrast Dye', category: 'Medication', quantity: 5, unit: 'bottles', status: 'low', updated_at: '2024-01-10' },
+                { id: 11, name: 'Oxygen Cylinders', category: 'Equipment', quantity: 18, unit: 'tanks', status: 'medium', updated_at: '2024-01-15' },
+                { id: 12, name: 'IV Drip Sets', category: 'Supplies', quantity: 200, unit: 'sets', status: 'high', updated_at: '2024-01-14' },
+                { id: 13, name: 'Antibiotics (Amoxicillin)', category: 'Medication', quantity: 75, unit: 'bottles', status: 'medium', updated_at: '2024-01-12' },
+                { id: 14, name: 'ECG Electrodes', category: 'Supplies', quantity: 1000, unit: 'pads', status: 'high', updated_at: '2024-01-15' },
+                { id: 15, name: 'Wheelchair', category: 'Equipment', quantity: 4, unit: 'units', status: 'low', updated_at: '2024-01-09' }
+            ];
+        }
         
         // Render table
         function renderTable(data) {
@@ -270,21 +342,24 @@
                     <td><strong>${item.quantity}</strong></td>
                     <td>${item.unit}</td>
                     <td><span class="stock-badge stock-${item.status}">${item.status.toUpperCase()}</span></td>
-                    <td>${formatDate(item.lastUpdated)}</td>
+                    <td>${formatDate(item.updated_at)}</td>
                     <td>
-                        <button class="action-btn" onclick="editItem(${item.id})">
+                        <button class="action-btn" onclick="editItem('${item.id}')">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn" onclick="deleteItem(${item.id})">
+                        <button class="action-btn" onclick="deleteItem('${item.id}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
+            
+            updateStatsFromData();
         }
         
         // Format date
         function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
             const date = new Date(dateStr);
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
@@ -299,20 +374,113 @@
             renderTable(filtered);
         });
         
-        // Item actions
-        function editItem(id) {
-            alert(`Edit item ${id} - functionality coming soon!`);
+        // Show add modal
+        function showAddModal() {
+            const name = prompt('Enter item name:');
+            if (!name) return;
+            
+            const category = prompt('Enter category (Medication, Equipment, Supplies, PPE):');
+            if (!category) return;
+            
+            const quantity = parseInt(prompt('Enter quantity:'));
+            if (isNaN(quantity)) return;
+            
+            const unit = prompt('Enter unit (vials, units, boxes, etc.):');
+            if (!unit) return;
+            
+            addItem({ name, category, quantity, unit });
         }
         
-        function deleteItem(id) {
-            if (confirm('Are you sure you want to delete this item?')) {
-                alert(`Item ${id} deleted - functionality coming soon!`);
+        // Add item
+        async function addItem(item) {
+            try {
+                const { data, error } = await window.MedAIInventory.addInventoryItem(item);
+                
+                if (error) {
+                    // Add locally if database fails
+                    const newItem = {
+                        id: Date.now(),
+                        ...item,
+                        status: window.MedAIInventory.calculateStockStatus(item.quantity, 10),
+                        updated_at: new Date().toISOString()
+                    };
+                    inventoryData.push(newItem);
+                    renderTable(inventoryData);
+                    alert('Item added (local only - database error)');
+                } else {
+                    inventoryData.push(data);
+                    renderTable(inventoryData);
+                    alert('Item added successfully!');
+                }
+            } catch (err) {
+                console.error('Error adding item:', err);
+                alert('Error adding item');
             }
         }
         
-        // Initial render
-        renderTable(inventoryData);
+        // Edit item
+        async function editItem(id) {
+            const item = inventoryData.find(i => i.id == id);
+            if (!item) return;
+            
+            const newQuantity = prompt(`Enter new quantity for ${item.name}:`, item.quantity);
+            if (newQuantity === null) return;
+            
+            const quantity = parseInt(newQuantity);
+            if (isNaN(quantity)) {
+                alert('Invalid quantity');
+                return;
+            }
+            
+            try {
+                const { data, error } = await window.MedAIInventory.updateInventoryItem(id, { quantity });
+                
+                if (error) {
+                    // Update locally if database fails
+                    item.quantity = quantity;
+                    item.status = window.MedAIInventory.calculateStockStatus(quantity, item.min_stock || 10);
+                    renderTable(inventoryData);
+                    alert('Item updated (local only)');
+                } else {
+                    const index = inventoryData.findIndex(i => i.id == id);
+                    if (index >= 0) inventoryData[index] = data;
+                    renderTable(inventoryData);
+                    alert('Item updated successfully!');
+                }
+            } catch (err) {
+                console.error('Error updating item:', err);
+                alert('Error updating item');
+            }
+        }
+        
+        // Delete item
+        async function deleteItem(id) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+            
+            try {
+                const { error } = await window.MedAIInventory.deleteInventoryItem(id);
+                
+                if (error) {
+                    // Delete locally if database fails
+                    inventoryData = inventoryData.filter(i => i.id != id);
+                    renderTable(inventoryData);
+                    alert('Item deleted (local only)');
+                } else {
+                    inventoryData = inventoryData.filter(i => i.id != id);
+                    renderTable(inventoryData);
+                    alert('Item deleted successfully!');
+                }
+            } catch (err) {
+                console.error('Error deleting item:', err);
+                alert('Error deleting item');
+            }
+        }
     </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="inventory-db.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">

@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -157,9 +161,9 @@
     
     <div class="diagnosis-container" style="position: relative; z-index: 1;">
         <!-- Back Button -->
-        <a href="index.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+        <a href="dashboard.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
             <i class="fas fa-arrow-left"></i>
-            <span>Back to Home</span>
+            <span>Back to Dashboard</span>
         </a>
         
         <!-- Main Card -->
@@ -233,6 +237,11 @@
     <script>
         let bpChart = null;
         
+        // Initialize Supabase
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MedAISupabase.initSupabase();
+        });
+        
         document.getElementById('bpForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -256,6 +265,32 @@
             
             // Analyze blood pressure
             const analysis = analyzeBP(formData);
+            
+            // Determine risk level for database
+            let riskLevel;
+            if (analysis.className === 'cat-crisis') {
+                riskLevel = 'critical';
+            } else if (analysis.className === 'cat-hypertension2') {
+                riskLevel = 'high';
+            } else if (analysis.className === 'cat-hypertension1' || analysis.className === 'cat-elevated') {
+                riskLevel = 'medium';
+            } else {
+                riskLevel = 'low';
+            }
+            
+            // Save to Supabase
+            const resultData = {
+                category: analysis.category,
+                description: analysis.description,
+                riskLevel: riskLevel
+            };
+            
+            try {
+                await window.MedAIDatabase.saveDiagnosisResult('bp', formData, resultData, riskLevel);
+                console.log('✅ Blood pressure assessment saved to database');
+            } catch (err) {
+                console.error('Error saving assessment:', err);
+            }
             
             // Display results
             displayResults(formData, analysis);
@@ -452,6 +487,11 @@
             });
         }
     </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">

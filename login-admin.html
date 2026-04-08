@@ -9,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -162,6 +166,25 @@
     </div>
     
     <script>
+        // Initialize Supabase on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MedAISupabase.initSupabase();
+            checkExistingSession();
+        });
+        
+        async function checkExistingSession() {
+            const isAuth = await window.MedAIAuth.checkAuthState();
+            if (isAuth) {
+                const user = await window.MedAIAuth.getCurrentUser();
+                if (user) {
+                    const profile = await window.MedAIAuth.getProfile(user.id);
+                    if (profile && profile.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    }
+                }
+            }
+        }
+        
         // Toggle password visibility
         document.getElementById('togglePassword').addEventListener('click', function() {
             const password = document.getElementById('adminPassword');
@@ -172,7 +195,7 @@
         });
         
         // Handle admin login
-        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const email = document.getElementById('adminEmail').value;
@@ -184,31 +207,22 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Authenticating...';
             submitBtn.disabled = true;
             
-            // Simulate authentication
-            setTimeout(() => {
-                // Demo credentials
-                if (email === 'admin@medai.com' && password === 'admin123') {
-                    // Store admin session
-                    localStorage.setItem('userRole', 'admin');
-                    localStorage.setItem('userEmail', email);
-                    localStorage.setItem('userName', 'Administrator');
-                    
-                    // Success animation
-                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Success!';
-                    submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-                    
-                    setTimeout(() => {
-                        window.location.href = 'admin.html';
-                    }, 1000);
-                } else {
+            // Remove any existing error messages
+            const existingError = document.querySelector('.alert-danger');
+            if (existingError) existingError.remove();
+            
+            try {
+                const { data, error } = await window.MedAIAuth.signInAdmin(email, password);
+                
+                if (error) {
                     // Error state
-                    submitBtn.innerHTML = '<i class="fas fa-times me-2"></i>Invalid credentials';
+                    submitBtn.innerHTML = '<i class="fas fa-times me-2"></i>Access Denied';
                     submitBtn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
                     
                     // Show error message
                     const errorDiv = document.createElement('div');
                     errorDiv.className = 'alert alert-danger mt-3';
-                    errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Invalid admin credentials. Please try again.';
+                    errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' + (error.message || 'Invalid admin credentials. Please try again.');
                     document.querySelector('.auth-container form').appendChild(errorDiv);
                     
                     setTimeout(() => {
@@ -217,8 +231,27 @@
                         submitBtn.style.background = '';
                         submitBtn.disabled = false;
                     }, 3000);
+                    return;
                 }
-            }, 1500);
+                
+                // Success animation
+                submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Success!';
+                submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                
+                setTimeout(() => {
+                    window.location.href = 'admin.html';
+                }, 1000);
+                
+            } catch (err) {
+                submitBtn.innerHTML = '<i class="fas fa-times me-2"></i>Error';
+                submitBtn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
+                
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.style.background = '';
+                    submitBtn.disabled = false;
+                }, 2000);
+            }
         });
         
         // Entrance animation
@@ -226,6 +259,11 @@
             { opacity: 0, y: 30 },
             { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', delay: 0.2 }
         );
+    </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
     </script>
     
     <!-- Three.js Import Map -->

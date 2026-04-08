@@ -9,6 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
@@ -435,6 +439,28 @@
             // Calculate matches
             const matches = analyzeSymptoms(selectedSymptoms);
             
+            // Determine risk level
+            let riskLevel = 'low';
+            if (matches.length > 0) {
+                const topMatch = matches[0];
+                if (topMatch.severity.includes('severe') || topMatch.matchPercentage >= 80) {
+                    riskLevel = 'high';
+                } else if (topMatch.matchPercentage >= 50) {
+                    riskLevel = 'medium';
+                }
+            }
+            
+            // Save to Supabase
+            const inputData = { symptoms: selectedSymptoms };
+            const resultData = { matches: matches.slice(0, 5), topCondition: matches[0]?.condition || 'None' };
+            
+            try {
+                await window.MedAIDatabase.saveDiagnosisResult('symptoms', inputData, resultData, riskLevel);
+                console.log('✅ Symptom check saved to database');
+            } catch (err) {
+                console.error('Error saving symptom check:', err);
+            }
+            
             // Display results
             displayResults(matches);
             
@@ -496,7 +522,17 @@
             if (severity.includes('severe')) return 'text-red-400';
             return 'text-yellow-400';
         }
+        
+        // Initialize Supabase
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MedAISupabase.initSupabase();
+        });
     </script>
+    
+    <!-- Supabase Modules -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">
