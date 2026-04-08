@@ -629,6 +629,9 @@
             const savedToken = localStorage.getItem('medai_admin_token');
             if (savedToken) {
                 verifyToken(savedToken);
+            } else {
+                // No token, redirect to admin login
+                window.location.href = 'login-admin.html';
             }
         });
         
@@ -671,19 +674,19 @@
         
         async function verifyToken(token) {
             try {
-                const response = await fetch(`${API_URL}/admin/verify`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
+                // Check if token is our local admin token
+                if (token && token.startsWith('admin-authenticated-')) {
                     adminToken = token;
-                    showDashboard(data.admin_email);
+                    showDashboard('admin@medai.com');
                 } else {
                     localStorage.removeItem('medai_admin_token');
+                    // Redirect to admin login if invalid token
+                    window.location.href = 'login-admin.html';
                 }
             } catch (error) {
                 console.error('Token verification failed:', error);
+                localStorage.removeItem('medai_admin_token');
+                window.location.href = 'login-admin.html';
             }
         }
         
@@ -697,40 +700,72 @@
         
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async function() {
-            try {
-                await fetch(`${API_URL}/admin/logout`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
-                });
-            } catch {}
-            
             localStorage.removeItem('medai_admin_token');
             adminToken = null;
-            document.getElementById('adminDashboard').style.display = 'none';
-            document.getElementById('loginOverlay').style.display = 'flex';
-            document.getElementById('adminEmail').value = '';
-            document.getElementById('adminPassword').value = '';
+            window.location.href = 'login-admin.html';
         });
         
-        // Load admin stats
+        // Load admin stats from Supabase
         async function loadStats() {
             try {
-                const response = await fetch(`${API_URL}/admin/stats`, {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get total diagnoses
+                const { data: diagnosesData, error: diagError } = await supabase
+                    .from('diagnosis_results')
+                    .select('*');
+                
+                if (diagError) throw diagError;
+                
+                const totalDiagnoses = diagnosesData?.length || 0;
+                
+                // Get today's diagnoses
+                const today = new Date().toISOString().split('T')[0];
+                const todayDiagnoses = diagnosesData?.filter(d => 
+                    d.created_at?.startsWith(today)
+                ).length || 0;
+                
+                // Calculate risk distribution
+                const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
+                diagnosesData?.forEach(d => {
+                    riskCounts[d.risk_level] = (riskCounts[d.risk_level] || 0) + 1;
                 });
                 
-                const data = await response.json();
+                // Calculate type distribution
+                const typeCounts = {};
+                diagnosesData?.forEach(d => {
+                    typeCounts[d.diagnosis_type] = (typeCounts[d.diagnosis_type] || 0) + 1;
+                });
                 
-                document.getElementById('totalUsers').textContent = data.total_users || 0;
-                document.getElementById('totalDiagnoses').textContent = data.total_diagnoses || 0;
-                document.getElementById('todayDiagnoses').textContent = data.today_diagnoses || 0;
+                // Get unique users count (approximation from profiles or diagnosis users)
+                const uniqueUsers = new Set(diagnosesData?.map(d => d.user_id) || []).size;
+                
+                // Update UI
+                document.getElementById('totalUsers').textContent = uniqueUsers;
+                document.getElementById('totalDiagnoses').textContent = totalDiagnoses;
+                document.getElementById('todayDiagnoses').textContent = todayDiagnoses;
                 document.getElementById('highRiskCount').textContent = 
-                    (data.risk_distribution?.high || 0) + (data.risk_distribution?.critical || 0);
+                    (riskCounts.high || 0) + (riskCounts.critical || 0);
                 
-                // Render charts
-                renderCharts(data);
+                // Render charts with real data
+                const chartData = {
+                    chart_data: {
+                        risk_labels: Object.keys(riskCounts),
+                        risk_values: Object.values(riskCounts),
+                        type_labels: Object.keys(typeCounts),
+                        type_values: Object.values(typeCounts)
+                    }
+                };
+                renderCharts(chartData);
+                
             } catch (error) {
                 console.error('Failed to load stats:', error);
+                // Set default values if error
+                document.getElementById('totalUsers').textContent = '0';
+                document.getElementById('totalDiagnoses').textContent = '0';
+                document.getElementById('todayDiagnoses').textContent = '0';
+                document.getElementById('highRiskCount').textContent = '0';
             }
         }
         
@@ -789,18 +824,48 @@
             });
         }
         
-        // Load users
+        // Load users from Supabase 
         async function loadUsers() {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
             
             try {
-                const response = await fetch(`${API_URL}/admin/users`, {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get diagnosis results to analyze users
+                const { data: diagnosesData, error: diagError } = await supabase
+                    .from('diagnosis_results')
+                    .select('*');
+                
+                if (diagError) throw diagError;
+                
+                // Group diagnoses by user
+                const userStats = {};
+                diagnosesData?.forEach(d => {
+                    const userId = d.user_id;
+                    if (!userStats[userId]) {
+                        userStats[userId] = {
+                            id: userId,
+                            email: `user-${userId.substring(0, 8)}@example.com`,
+                            full_name: `User ${userId.substring(0, 8)}`,
+                            total_assessments: 0,
+                            last_assessment: null,
+                            risk_summary: { low: 0, medium: 0, high: 0, critical: 0 }
+                        };
+                    }
+                    
+                    userStats[userId].total_assessments++;
+                    userStats[userId].risk_summary[d.risk_level] = 
+                        (userStats[userId].risk_summary[d.risk_level] || 0) + 1;
+                    
+                    if (!userStats[userId].last_assessment || 
+                        new Date(d.created_at) > new Date(userStats[userId].last_assessment)) {
+                        userStats[userId].last_assessment = d.created_at;
+                    }
                 });
                 
-                const data = await response.json();
-                const users = data.users || [];
+                const users = Object.values(userStats);
                 
                 if (users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-8">No users found</td></tr>';
@@ -810,6 +875,7 @@
                 tbody.innerHTML = users.map(user => {
                     const riskSummary = user.risk_summary || {};
                     const riskBadges = Object.entries(riskSummary)
+                        .filter(([risk, count]) => count > 0)
                         .map(([risk, count]) => `<span class="risk-badge risk-${risk}">${count} ${risk}</span>`)
                         .join(' ') || '<span class="text-gray-500">No data</span>';
                     
@@ -846,7 +912,7 @@
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
         
-        // View user details
+        // View user details (simplified without backend dependency)
         async function viewUserDetails(userId) {
             const modal = document.getElementById('userModal');
             modal.style.display = 'flex';
@@ -855,20 +921,47 @@
             document.getElementById('userHistory').innerHTML = '<p class="text-center text-gray-400 py-8">Loading...</p>';
             
             try {
-                const response = await fetch(`${API_URL}/admin/user/${userId}/history`, {
-                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                // Get user's diagnosis history
+                const { data: history, error } = await supabase
+                    .from('diagnosis_results')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                // Calculate trends
+                const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
+                const typeCounts = {};
+                
+                history?.forEach(item => {
+                    riskCounts[item.risk_level] = (riskCounts[item.risk_level] || 0) + 1;
+                    typeCounts[item.diagnosis_type] = (typeCounts[item.diagnosis_type] || 0) + 1;
                 });
                 
-                const data = await response.json();
-                const trends = data.trends || {};
-                const history = data.history || [];
+                const mostCommon = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+                const avgRisk = history?.length > 0 ? 
+                    Object.entries(riskCounts).reduce((total, [risk, count]) => {
+                        const weights = { low: 1, medium: 2, high: 3, critical: 4 };
+                        return total + (weights[risk] || 1) * count;
+                    }, 0) / history.length : 0;
+                
+                const trends = {
+                    total_assessments: history?.length || 0,
+                    most_common: mostCommon ? mostCommon[0] : 'N/A',
+                    health_trend: avgRisk > 2.5 ? 'needs attention' : avgRisk > 1.5 ? 'stable' : 'good',
+                    average_risk: avgRisk < 1.5 ? 'Low' : avgRisk < 2.5 ? 'Medium' : 'High'
+                };
                 
                 // Update modal title
                 document.getElementById('modalUserName').textContent = `User: ${userId.substring(0, 8)}...`;
                 
                 // Render trends summary
-                const trendClass = trends.health_trend === 'improving' ? 'trend-improving' : 
-                                   trends.health_trend === 'worsening' ? 'trend-worsening' : 'trend-stable';
+                const trendClass = trends.health_trend === 'good' ? 'trend-improving' : 
+                                   trends.health_trend === 'needs attention' ? 'trend-worsening' : 'trend-stable';
                 
                 document.getElementById('trendsSummary').innerHTML = `
                     <div class="trend-card">
@@ -880,7 +973,7 @@
                         <div class="trend-label">Most Common</div>
                     </div>
                     <div class="trend-card">
-                        <div class="trend-value ${trendClass}">${(trends.health_trend || 'unknown').replace('_', ' ')}</div>
+                        <div class="trend-value ${trendClass}">${trends.health_trend.replace('_', ' ')}</div>
                         <div class="trend-label">Health Trend</div>
                     </div>
                     <div class="trend-card">
@@ -890,7 +983,7 @@
                 `;
                 
                 // Render history
-                if (history.length === 0) {
+                if (!history || history.length === 0) {
                     document.getElementById('userHistory').innerHTML = '<p class="text-center text-gray-400 py-8">No diagnosis history</p>';
                 } else {
                     document.getElementById('userHistory').innerHTML = history.slice(0, 10).map(item => `
@@ -898,6 +991,18 @@
                             <div>
                                 <div class="font-semibold">${(item.diagnosis_type || 'unknown').charAt(0).toUpperCase() + (item.diagnosis_type || '').slice(1)}</div>
                                 <div class="text-sm text-gray-400">${formatDate(item.created_at)}</div>
+                            </div>
+                            <span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span>
+                        </div>
+                    `).join('');
+                }
+                
+            } catch (err) {
+                console.error('Error loading user details:', err);
+                document.getElementById('trendsSummary').innerHTML = '<p class="col-span-4 text-center text-red-400">Failed to load trends</p>';
+                document.getElementById('userHistory').innerHTML = '<p class="text-center text-red-400 py-8">Failed to load history</p>';
+            }
+        }
                             </div>
                             <span class="risk-badge risk-${item.risk_level || 'medium'}">${item.risk_level || 'unknown'}</span>
                         </div>

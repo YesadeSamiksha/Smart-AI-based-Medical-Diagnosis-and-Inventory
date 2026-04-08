@@ -366,37 +366,104 @@
         
         function clientSidePrediction(data) {
             let score = 0;
+            const factors = {};
             const age = data.age || 0;
             const bmi = data.bmi || (data.weight && data.height ? data.weight / Math.pow(data.height/100, 2) : 25);
             
-            if (age > 60) score += 3;
-            else if (age > 45) score += 2;
-            else if (age > 35) score += 1;
+            // Age scoring (more granular)
+            if (age >= 65) { score += 4; factors.age = 'Very High Risk'; }
+            else if (age >= 55) { score += 3; factors.age = 'High Risk'; }
+            else if (age >= 45) { score += 2; factors.age = 'Moderate Risk'; }
+            else if (age >= 35) { score += 1; factors.age = 'Mild Risk'; }
+            else { factors.age = 'Low Risk'; }
             
-            if (bmi > 35) score += 4;
-            else if (bmi > 30) score += 3;
-            else if (bmi > 25) score += 2;
+            // BMI scoring with clinical thresholds
+            if (bmi >= 35) { score += 5; factors.bmi = 'Severe Obesity (Class II+)'; }
+            else if (bmi >= 30) { score += 4; factors.bmi = 'Obese (Class I)'; }
+            else if (bmi >= 27.5) { score += 3; factors.bmi = 'Overweight (High)'; }
+            else if (bmi >= 25) { score += 2; factors.bmi = 'Overweight'; }
+            else if (bmi >= 23) { score += 1; factors.bmi = 'Pre-overweight'; }
+            else if (bmi < 18.5) { score += 1; factors.bmi = 'Underweight'; }
+            else { factors.bmi = 'Normal'; }
             
-            if (data.family_history === 'yes') score += 3;
-            if (data.physical_activity === 'sedentary') score += 2;
-            else if (data.physical_activity === 'light') score += 1;
-            if (data.diet_quality === 'poor') score += 2;
-            if (data.smoking === 'yes') score += 1;
+            // Family history (strong predictor)
+            if (data.family_history === 'yes') { score += 4; factors.family = 'Positive History'; }
             
-            const symptoms = ['frequent_urination', 'excessive_thirst', 'tiredness', 'blurred_vision', 'slow_healing', 'dark_skin_patches', 'frequent_infections'];
-            symptoms.forEach(s => { if (data[s] === 'yes') score += 1; });
+            // Lifestyle factors
+            if (data.physical_activity === 'sedentary') { score += 3; factors.activity = 'Sedentary'; }
+            else if (data.physical_activity === 'light') { score += 2; factors.activity = 'Light Activity'; }
+            else if (data.physical_activity === 'moderate') { score += 1; factors.activity = 'Moderate Activity'; }
             
-            const probability = Math.min((score / 22) * 100, 100);
-            let risk_level, prediction;
+            if (data.diet_quality === 'poor') { score += 3; factors.diet = 'Poor'; }
+            else if (data.diet_quality === 'average') { score += 1; factors.diet = 'Average'; }
             
-            if (probability >= 55) { risk_level = 'high'; prediction = 'High Risk'; }
-            else if (probability >= 30) { risk_level = 'medium'; prediction = 'Medium Risk'; }
-            else { risk_level = 'low'; prediction = 'Low Risk'; }
+            if (data.smoking === 'yes') { score += 2; factors.smoking = 'Current Smoker'; }
+            if (data.alcohol === 'heavy') { score += 2; factors.alcohol = 'Heavy Drinker'; }
+            else if (data.alcohol === 'moderate') { score += 1; factors.alcohol = 'Moderate'; }
+            
+            if (data.stress_level === 'high') { score += 2; factors.stress = 'High Stress'; }
+            else if (data.stress_level === 'medium') { score += 1; factors.stress = 'Medium Stress'; }
+            
+            // Sleep (important for glucose regulation)
+            const sleep = data.sleep_hours || 7;
+            if (sleep < 5 || sleep > 9) { score += 2; factors.sleep = 'Poor Sleep'; }
+            else if (sleep < 6 || sleep > 8) { score += 1; factors.sleep = 'Suboptimal Sleep'; }
+            
+            // Symptoms (weighted by clinical significance)
+            const symptomsWeight = {
+                frequent_urination: 2,
+                excessive_thirst: 2,
+                tiredness: 1,
+                blurred_vision: 2,
+                slow_healing: 2,
+                dark_skin_patches: 2, // Acanthosis nigricans
+                frequent_infections: 1
+            };
+            
+            let symptomCount = 0;
+            let symptomScore = 0;
+            Object.keys(symptomsWeight).forEach(s => {
+                if (data[s] === 'yes') {
+                    symptomCount++;
+                    symptomScore += symptomsWeight[s];
+                }
+            });
+            score += symptomScore;
+            factors.symptoms = symptomCount > 0 ? `${symptomCount} symptoms present` : 'No concerning symptoms';
+            
+            // Calculate probability with sigmoid scaling for more realistic distribution
+            const maxScore = 30;
+            const rawProbability = (score / maxScore) * 100;
+            // Apply sigmoid transformation for smoother probability curve
+            const probability = Math.min(Math.round(100 / (1 + Math.exp(-0.1 * (score - 12)))), 95);
+            
+            let risk_level, prediction, severity;
+            if (probability >= 60 || score >= 18) { 
+                risk_level = 'high'; 
+                prediction = 'High Risk'; 
+                severity = 3;
+            } else if (probability >= 35 || score >= 10) { 
+                risk_level = 'medium'; 
+                prediction = 'Moderate Risk'; 
+                severity = 2;
+            } else { 
+                risk_level = 'low'; 
+                prediction = 'Low Risk'; 
+                severity = 1;
+            }
             
             return {
-                prediction, probability: Math.round(probability), risk_level, bmi: Math.round(bmi * 10) / 10,
-                bmi_category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese',
-                model_type: 'client_side'
+                prediction,
+                probability,
+                risk_level,
+                severity,
+                score,
+                maxScore,
+                bmi: Math.round(bmi * 10) / 10,
+                bmi_category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : bmi < 35 ? 'Obese Class I' : 'Obese Class II+',
+                factors,
+                symptomCount,
+                model_type: 'Enhanced Clinical Algorithm'
             };
         }
         
@@ -456,7 +523,24 @@
                 </div>
             `;
             
-            apiStatus.textContent = usedAPI ? `Analysis by: ${result.model_type || 'ML'} model (Backend API)` : `Analysis by: Client-side algorithm`;
+            // Add factor analysis if available
+            if (result.factors && result.factors.length > 0) {
+                recommendations.innerHTML += `
+                    <div class="bg-gray-800 bg-opacity-50 border border-gray-600 rounded-lg p-4 mt-4">
+                        <h4 class="font-bold mb-3"><i class="fas fa-chart-bar mr-2"></i>Risk Factor Analysis</h4>
+                        <div class="text-sm space-y-2">
+                            <p class="text-gray-400">Score: <span class="text-white font-bold">${result.score}/${result.maxScore || 30}</span> points</p>
+                            ${result.symptomCount > 0 ? `<p class="text-yellow-400"><i class="fas fa-exclamation-triangle mr-1"></i>${result.symptomCount} symptom(s) detected</p>` : ''}
+                            <p class="text-gray-400">Identified factors:</p>
+                            <ul class="list-disc list-inside text-gray-300">
+                                ${result.factors.map(f => `<li>${f}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            apiStatus.textContent = usedAPI ? `Analysis by: ${result.model_type || 'ML'} model (Backend API)` : `Analysis by: ${result.model_type || 'Client-side algorithm'}`;
             
             resultCard.classList.add('show');
             resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

@@ -421,7 +421,10 @@
                     created_at: new Date().toISOString()
                 };
                 
-                const { data, error } = await window.MedAISupabase.supabase
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) throw new Error('Supabase not initialized');
+                
+                const { data, error } = await supabase
                     .from('orders')
                     .insert([orderData])
                     .select();
@@ -432,7 +435,7 @@
                 
                 // Deduct stock for each item
                 for (const item of cart) {
-                    const { data: currentItem, error: fetchError } = await window.MedAISupabase.supabase
+                    const { data: currentItem, error: fetchError } = await supabase
                         .from('inventory')
                         .select('quantity')
                         .eq('id', item.id)
@@ -445,7 +448,7 @@
                     
                     const newQuantity = currentItem.quantity - item.quantity;
                     
-                    const { error: updateError } = await window.MedAISupabase.supabase
+                    const { error: updateError } = await supabase
                         .from('inventory')
                         .update({ quantity: newQuantity })
                         .eq('id', item.id);
@@ -477,6 +480,9 @@
             }
         }
     </script>
+    
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
     
     <script type="importmap">
     {

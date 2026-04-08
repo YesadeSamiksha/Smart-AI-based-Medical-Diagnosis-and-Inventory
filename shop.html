@@ -681,9 +681,13 @@
             // Redirect to checkout page
             window.location.href = 'checkout.html';
         }
-                toggleCart();
-            }
-        }
+        
+        // Initialize page on load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadProducts();
+            loadCart();
+        });
     </script>
     
     <script src="supabase-config.js"></script>

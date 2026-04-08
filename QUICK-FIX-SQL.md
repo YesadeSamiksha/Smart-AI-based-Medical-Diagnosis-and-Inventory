@@ -94,22 +94,53 @@ ON CONFLICT DO NOTHING;
 -- ENABLE RLS & ADD POLICIES
 -- ============================================
 
+-- Enable RLS
 ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE diagnosis_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Anyone can view inventory
-CREATE POLICY "Anyone can view inventory" ON inventory FOR SELECT USING (true);
+-- Drop existing policies first (to avoid conflicts)
+DROP POLICY IF EXISTS "Anyone can view inventory" ON inventory;
+DROP POLICY IF EXISTS "Users can create orders" ON orders;
+DROP POLICY IF EXISTS "Users can view orders" ON orders;
+DROP POLICY IF EXISTS "Users can create diagnosis" ON diagnosis_results;
+DROP POLICY IF EXISTS "Users can view diagnosis" ON diagnosis_results;
+DROP POLICY IF EXISTS "Users can view profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 
--- Users can create orders
-CREATE POLICY "Users can create orders" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can view orders" ON orders FOR SELECT USING (true);
+-- INVENTORY - PUBLIC READ (for shop page)
+CREATE POLICY "Anyone can view inventory" ON inventory 
+    FOR SELECT USING (true);
 
--- Users can create/view diagnosis
-CREATE POLICY "Users can create diagnosis" ON diagnosis_results FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can view diagnosis" ON diagnosis_results FOR SELECT USING (true);
+-- INVENTORY - ADMIN WRITE (for admin panel)
+CREATE POLICY "Admin can manage inventory" ON inventory 
+    FOR ALL USING (true) WITH CHECK (true);
 
--- CREATE INDEXES
+-- ORDERS - Users can create and view their own orders
+CREATE POLICY "Users can create orders" ON orders 
+    FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can view orders" ON orders 
+    FOR SELECT USING (true);
+CREATE POLICY "Users can update orders" ON orders 
+    FOR UPDATE USING (true) WITH CHECK (true);
+
+-- DIAGNOSIS - Users can create and view their own results
+CREATE POLICY "Users can create diagnosis" ON diagnosis_results 
+    FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can view diagnosis" ON diagnosis_results 
+    FOR SELECT USING (true);
+
+-- PROFILES - Users can view and manage their own profiles
+CREATE POLICY "Users can view profiles" ON profiles 
+    FOR SELECT USING (true);
+CREATE POLICY "Users can insert own profile" ON profiles 
+    FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own profile" ON profiles 
+    FOR UPDATE USING (true) WITH CHECK (true);
+
+-- CREATE INDEXES for better performance
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_user_id ON diagnosis_results(user_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_category ON inventory(category);

@@ -357,34 +357,80 @@
             }
         }
         
-        // Load health trends
+        // Load health trends from Supabase data
         async function loadTrends() {
             try {
-                const userId = await getUserId();
-                if (!userId) return;
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) return;
                 
-                const response = await fetch(`${API_URL}/user/${userId}/trends`);
-                const trends = await response.json();
+                // Get all diagnosis results for current user
+                const { data, error } = await supabase
+                    .from('diagnosis_results')
+                    .select('*')
+                    .order('created_at', { ascending: false });
                 
-                document.getElementById('totalAssessments').textContent = trends.total_assessments || 0;
+                if (error) throw error;
                 
-                const trendEl = document.getElementById('healthTrend');
-                const trendText = trends.health_trend || 'N/A';
-                trendEl.textContent = trendText.replace('_', ' ');
+                const total = data?.length || 0;
+                document.getElementById('totalAssessments').textContent = total;
                 
-                if (trendText === 'improving') {
-                    trendEl.style.color = '#22c55e';
-                } else if (trendText === 'worsening') {
-                    trendEl.style.color = '#ef4444';
-                } else {
-                    trendEl.style.color = '#eab308';
+                if (total === 0) {
+                    document.getElementById('healthTrend').textContent = '--';
+                    document.getElementById('mostCommon').textContent = '--';
+                    document.getElementById('avgRisk').textContent = '--';
+                    return;
                 }
                 
-                document.getElementById('mostCommon').textContent = trends.most_common || '--';
-                document.getElementById('avgRisk').textContent = trends.average_risk || '--';
+                // Calculate trends
+                const riskScores = { 'low': 1, 'medium': 2, 'high': 3, 'critical': 4 };
+                const recent = data.slice(0, 3);
+                const older = data.slice(3, 6);
+                
+                let trendText = '--';
+                let trendColor = '#eab308';
+                
+                if (recent.length >= 2 && older.length >= 1) {
+                    const recentAvg = recent.reduce((sum, item) => sum + (riskScores[item.risk_level] || 2), 0) / recent.length;
+                    const olderAvg = older.reduce((sum, item) => sum + (riskScores[item.risk_level] || 2), 0) / older.length;
+                    
+                    if (recentAvg < olderAvg - 0.3) {
+                        trendText = 'Improving';
+                        trendColor = '#22c55e';
+                    } else if (recentAvg > olderAvg + 0.3) {
+                        trendText = 'Needs Attention';
+                        trendColor = '#ef4444';
+                    } else {
+                        trendText = 'Stable';
+                        trendColor = '#eab308';
+                    }
+                }
+                
+                const trendEl = document.getElementById('healthTrend');
+                trendEl.textContent = trendText;
+                trendEl.style.color = trendColor;
+                
+                // Most common check type
+                const typeCounts = {};
+                data.forEach(item => {
+                    typeCounts[item.diagnosis_type] = (typeCounts[item.diagnosis_type] || 0) + 1;
+                });
+                const mostCommon = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+                const typeNames = { 
+                    'diabetes': 'Diabetes Check', 
+                    'lung': 'Lung Screening', 
+                    'bp': 'BP Analysis', 
+                    'symptoms': 'Symptom Check' 
+                };
+                document.getElementById('mostCommon').textContent = mostCommon ? 
+                    typeNames[mostCommon[0]] || mostCommon[0] : '--';
+                
+                // Average risk score
+                const avgRisk = data.reduce((sum, item) => sum + (riskScores[item.risk_level] || 2), 0) / total;
+                const riskLabel = avgRisk < 1.5 ? 'Low' : avgRisk < 2.5 ? 'Medium' : avgRisk < 3.5 ? 'High' : 'Critical';
+                document.getElementById('avgRisk').textContent = riskLabel;
                 
             } catch (err) {
-                console.log('Could not load trends from API');
+                console.error('Error loading trends:', err);
             }
         }
         
