@@ -174,9 +174,21 @@
         });
         
         async function checkExistingSession() {
-            const token = localStorage.getItem('medai_admin_token');
-            if (token && token.startsWith('admin-authenticated-')) {
-                window.location.href = 'admin-v2.html';
+            try {
+                // Check for admin token
+                const token = localStorage.getItem('medai_admin_token');
+                const adminId = localStorage.getItem('medai_admin_id');
+                
+                if (token && token.startsWith('admin-authenticated-') && adminId === 'single-admin-user') {
+                    console.log('🔄 Admin session found, redirecting...');
+                    window.location.href = 'admin-v2.html';
+                }
+            } catch (error) {
+                console.warn('⚠️ Session check failed:', error.message);
+                // Clear invalid session
+                localStorage.removeItem('medai_admin_token');
+                localStorage.removeItem('medai_admin_email');
+                localStorage.removeItem('medai_admin_id');
             }
         }
         
@@ -189,7 +201,7 @@
             this.classList.toggle('fa-eye-slash');
         });
         
-        // Handle admin login (static credentials)
+        // Handle admin login with SIMPLE single-admin check
         document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -207,17 +219,22 @@
             if (existingError) existingError.remove();
             
             try {
-                // Static admin credentials check
+                // SIMPLE HARDCODED ADMIN CHECK - Only one admin allowed
                 const ADMIN_EMAIL = 'admin@medai.com';
                 const ADMIN_PASSWORD = 'MedAI@Admin2024';
                 
+                console.log('🔐 Checking admin credentials...');
+                
                 // Simulate loading delay
-                await new Promise(resolve => setTimeout(resolve, 800));
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-                    // Success
+                    console.log('✅ Admin credentials verified');
+                    
+                    // Store admin session
                     localStorage.setItem('medai_admin_token', 'admin-authenticated-' + Date.now());
                     localStorage.setItem('medai_admin_email', email);
+                    localStorage.setItem('medai_admin_id', 'single-admin-user');
                     
                     // Success animation
                     submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Access Granted!';
@@ -226,11 +243,14 @@
                     setTimeout(() => {
                         window.location.href = 'admin-v2.html';
                     }, 1000);
+                    
                 } else {
-                    throw new Error('Invalid admin credentials');
+                    throw new Error('Invalid admin credentials. Only the system administrator can access this panel.');
                 }
                 
             } catch (err) {
+                console.error('❌ Admin login failed:', err.message);
+                
                 // Error state
                 submitBtn.innerHTML = '<i class="fas fa-times me-2"></i>Access Denied';
                 submitBtn.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
@@ -241,13 +261,15 @@
                 errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${err.message}`;
                 submitBtn.parentNode.appendChild(errorDiv);
                 
-                // Reset button after 2 seconds
+                // Reset button after 3 seconds
                 setTimeout(() => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.style.background = '';
                     submitBtn.disabled = false;
-                    errorDiv.remove();
-                }, 2500);
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 3000);
             }
         });
         
@@ -257,6 +279,9 @@
             { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', delay: 0.2 }
         );
     </script>
+    
+    <!-- Include Supabase Configuration -->
+    <script src="supabase-config.js"></script>
     
     <!-- Three.js Import Map -->
     <script type="importmap">
