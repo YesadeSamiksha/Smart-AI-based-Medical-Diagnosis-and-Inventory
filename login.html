@@ -37,23 +37,53 @@
     </script>
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * { font-family: 'Inter', sans-serif; }
+
         body {
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            background: #0a0a0f;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-wrapper {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 6rem 1rem 2rem;
+            position: relative;
+            z-index: 1;
         }
         
         .auth-container {
-            max-width: 450px;
+            max-width: 460px;
             width: 100%;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 2.25rem;
+            background: rgba(10, 10, 20, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow:
+                0 8px 48px rgba(0, 0, 0, 0.5),
+                0 1px 0 rgba(255,255,255,0.06) inset,
+                0 0 0 1px rgba(99,102,241,0.08);
+            position: relative;
+        }
+
+        /* Shimmer line on top of card */
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20px;
+            right: 20px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(165,180,252,0.35), transparent);
+            border-radius: 9999px;
         }
         
         .form-control {
@@ -61,72 +91,292 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: white;
             padding: 0.75rem 1rem;
-            border-radius: 10px;
+            border-radius: 12px;
+            transition: all 0.25s ease;
         }
         
         .form-control:focus {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.5);
             color: white;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
         
         .form-control::placeholder {
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.35);
         }
         
         .btn-primary {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             border: none;
-            padding: 0.75rem;
-            border-radius: 10px;
+            padding: 0.8rem;
+            border-radius: 12px;
             font-weight: 600;
             transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+            letter-spacing: 0.3px;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.55), 0 4px 16px rgba(0,0,0,0.3);
+            filter: brightness(1.1);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
         }
         
         .tab-button {
             background: none;
             border: none;
-            color: rgba(255, 255, 255, 0.6);
-            padding: 0.75rem 2rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.45);
+            padding: 0.65rem 1.75rem;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.25s ease;
             border-bottom: 2px solid transparent;
+            border-radius: 8px 8px 0 0;
+            letter-spacing: 0.3px;
         }
         
         .tab-button.active {
             color: white;
             border-bottom-color: #6366f1;
+            font-weight: 600;
+        }
+
+        .tab-button:hover:not(.active) {
+            color: rgba(255,255,255,0.7);
+            background: rgba(255,255,255,0.04);
         }
         
         .social-btn {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 0.75rem;
-            border-radius: 10px;
-            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.75);
+            padding: 0.7rem;
+            border-radius: 12px;
+            transition: all 0.25s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            font-size: 14px;
+            font-weight: 500;
         }
         
         .social-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.09);
             border-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .form-label {
+            font-size: 13.5px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        /* ===== NAVBAR (same as index) ===== */
+        .pill-nav-container {
+            position: fixed;
+            top: 1.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            pointer-events: auto;
+        }
+
+        .pill-nav {
+            --nav-h: 52px;
+            --pill-pad-x: 18px;
+            --pill-gap: 3px;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --pill-text: rgba(255,255,255,0.75);
+            --pill-text-hover: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill-logo {
+            width: var(--nav-h);
+            height: var(--nav-h);
+            border-radius: 50%;
+            background: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            box-shadow: 0 0 18px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #a5b4fc;
+            font-size: 1.4rem;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+        }
+
+        .pill-logo:hover {
+            transform: scale(1.12) rotate(-5deg);
+            color: #ffffff;
+            border-color: rgba(139, 92, 246, 0.7);
+            box-shadow: 0 0 28px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+
+        .pill-nav-items {
+            display: flex;
+            align-items: center;
+            height: var(--nav-h);
+            background: rgba(10, 10, 20, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 9999px;
+            padding: 5px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 30px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.06) inset;
+            position: relative;
+        }
+
+        .pill-nav-items::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 12px;
+            right: 12px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(165,180,252,0.3), transparent);
+            border-radius: 9999px;
+        }
+
+        .pill-list {
+            list-style: none;
+            display: flex;
+            align-items: stretch;
+            gap: var(--pill-gap);
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        .pill-list > li { display: flex; height: 100%; }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 var(--pill-pad-x);
+            background: transparent;
+            color: var(--pill-text);
+            text-decoration: none;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 13.5px;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: color 0.25s ease, background 0.25s ease;
+            border: none;
+        }
+
+        .pill:hover {
+            color: var(--pill-text-hover);
+            background: rgba(255,255,255,0.06);
+        }
+
+        .pill.is-active {
+            color: #ffffff;
+            background: rgba(99, 102, 241, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(99,102,241,0.3);
+        }
+
+        .pill-auth {
+            display: flex;
+            align-items: center;
+            height: var(--nav-h);
+            background: rgba(10, 10, 20, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 9999px;
+            padding: 5px;
+            gap: var(--pill-gap);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 30px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.06) inset;
+            position: relative;
+        }
+
+        .pill-auth::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 12px;
+            right: 12px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(165,180,252,0.3), transparent);
+            border-radius: 9999px;
+        }
+
+        .pill-auth .pill { font-size: 13px; }
+
+        .pill-auth .pill.signup {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            color: white;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            padding: 0 20px;
+            box-shadow: 0 0 20px rgba(99,102,241,0.4), 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .pill-auth .pill.signup:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 30px rgba(99,102,241,0.6), 0 4px 16px rgba(0,0,0,0.4);
+            filter: brightness(1.1);
+        }
+
+        .pill-auth .pill.login-active {
+            background: rgba(99,102,241,0.15);
+            color: white;
+            box-shadow: inset 0 0 0 1px rgba(99,102,241,0.3);
+        }
+
+        @media (max-width: 640px) {
+            .pill-nav-items { display: none; }
+            .auth-container { padding: 1.5rem; }
         }
     </style>
 </head>
 <body>
     <!-- Ballpit Background Canvas -->
     <canvas id="ballpitCanvas"></canvas>
+
+    <!-- Glassmorphism Navbar -->
+    <div class="pill-nav-container">
+        <nav class="pill-nav" id="pillNav">
+            <a href="index.html" class="pill-logo">
+                <i class="fas fa-heartbeat"></i>
+            </a>
+            <div class="pill-nav-items">
+                <ul class="pill-list">
+                    <li><a href="index.html" class="pill">Home</a></li>
+                    <li><a href="index.html#features" class="pill">Features</a></li>
+                    <li><a href="index.html#about" class="pill">About</a></li>
+                    <li><a href="index.html#contact" class="pill">Contact</a></li>
+                </ul>
+            </div>
+            <div class="pill-auth">
+                <a href="login.html" class="pill login-active">Login</a>
+                <a href="login.html#signup" class="pill signup" onclick="showTab('signup'); return false;">Sign Up</a>
+            </div>
+        </nav>
+    </div>
     
-    <div class="auth-container" style="position: relative; z-index: 1;">
+    <div class="page-wrapper">
+    <div class="auth-container">
         <!-- Logo -->
         <div class="text-center mb-4">
             <a href="index.html" class="text-white text-decoration-none">
@@ -250,6 +500,7 @@
             </p>
         </div>
     </div>
+    </div><!-- end page-wrapper -->
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -280,6 +531,15 @@
             const signupTab = document.getElementById('signupTab');
             const loginForm = document.getElementById('loginForm');
             const signupForm = document.getElementById('signupForm');
+            const navLogin = document.querySelector('.pill-auth .pill.login-active');
+            const navSignup = document.querySelector('.pill-auth .pill.signup');
+            if (tab === 'signup') {
+                navLogin && navLogin.classList.remove('login-active');
+                navSignup && navSignup.classList.add('signup-active');
+            } else {
+                navLogin && navLogin.classList.add('login-active');
+                navSignup && navSignup.classList.remove('signup-active');
+            }
             
             if (tab === 'login') {
                 loginTab.classList.add('active');
