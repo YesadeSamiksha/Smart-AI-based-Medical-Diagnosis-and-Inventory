@@ -302,9 +302,69 @@
         
         function analyzeBP(data) {
             let category, description, recommendations, className;
+            let riskScore = 0;
+            const factors = [];
             
-            // Determine BP category based on AHA guidelines
-            if (data.systolic < 120 && data.diastolic < 80) {
+            // Determine BP category based on AHA/ACC 2017 guidelines
+            const systolic = data.systolic;
+            const diastolic = data.diastolic;
+            const heartRate = data.heartRate;
+            const age = data.age || 40;
+            
+            // Heart rate analysis
+            let hrStatus = 'Normal';
+            if (heartRate < 60) { 
+                hrStatus = 'Bradycardia'; 
+                factors.push('Low heart rate'); 
+                riskScore += 1;
+            } else if (heartRate > 100) { 
+                hrStatus = 'Tachycardia'; 
+                factors.push('Elevated heart rate'); 
+                riskScore += 2;
+            }
+            
+            // Age factor
+            if (age >= 65) { riskScore += 2; factors.push('Age ≥65'); }
+            else if (age >= 55) { riskScore += 1; }
+            
+            // Pulse Pressure Analysis (important cardiovascular indicator)
+            const pulsePressure = systolic - diastolic;
+            let ppStatus = 'Normal';
+            if (pulsePressure > 60) {
+                ppStatus = 'Widened';
+                factors.push('Wide pulse pressure');
+                riskScore += 1;
+            } else if (pulsePressure < 30) {
+                ppStatus = 'Narrowed';
+                factors.push('Narrow pulse pressure');
+                riskScore += 1;
+            }
+            
+            // Mean Arterial Pressure calculation
+            const map = Math.round(diastolic + (pulsePressure / 3));
+            let mapStatus = 'Normal';
+            if (map < 70) { mapStatus = 'Low (Hypoperfusion risk)'; riskScore += 2; }
+            else if (map > 100) { mapStatus = 'Elevated'; riskScore += 1; }
+            
+            // Main BP Classification
+            if (systolic < 90 || diastolic < 60) {
+                category = 'Hypotension';
+                className = 'cat-low';
+                description = 'Your blood pressure is lower than normal. This may cause dizziness or fainting.';
+                recommendations = `
+                    <div class="bg-blue-500 bg-opacity-10 border border-blue-500 rounded-lg p-4">
+                        <h4 class="font-bold mb-2"><i class="fas fa-info-circle mr-2"></i>Low Blood Pressure Management</h4>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Increase salt intake slightly (if no contraindications)</li>
+                            <li>Stay well hydrated (8-10 glasses of water daily)</li>
+                            <li>Rise slowly from sitting/lying positions</li>
+                            <li>Wear compression stockings if recommended</li>
+                            <li>Avoid alcohol and hot environments</li>
+                            <li>Consult doctor if symptoms persist</li>
+                        </ul>
+                    </div>
+                `;
+            } else if (systolic < 120 && diastolic < 80) {
                 category = 'Normal';
                 className = 'cat-normal';
                 description = 'Your blood pressure is in the normal range. Keep up the healthy lifestyle!';
@@ -394,11 +454,48 @@
             }
             
             // Note if on medication
-            if (data.medications === 'yes' && (data.systolic >= 130 || data.diastolic >= 80)) {
+            if (data.medications === 'yes' && (systolic >= 130 || diastolic >= 80)) {
                 description += ' Since you\'re on medication, consult your doctor about adjusting dosage.';
             }
             
-            return { category, className, description, recommendations };
+            // Add cardiovascular metrics to recommendations
+            const metricsHtml = `
+                <div class="bg-gray-800 bg-opacity-50 border border-gray-600 rounded-lg p-4 mt-4">
+                    <h4 class="font-bold mb-3"><i class="fas fa-heartbeat mr-2"></i>Cardiovascular Metrics</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-400">Pulse Pressure:</span>
+                            <span class="text-white ml-2">${pulsePressure} mmHg (${ppStatus})</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Mean Arterial Pressure:</span>
+                            <span class="text-white ml-2">${map} mmHg (${mapStatus})</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Heart Rate Status:</span>
+                            <span class="text-white ml-2">${hrStatus}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Risk Factors:</span>
+                            <span class="text-white ml-2">${factors.length > 0 ? factors.join(', ') : 'None identified'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            recommendations += metricsHtml;
+            
+            return { 
+                category, 
+                className, 
+                description, 
+                recommendations,
+                pulsePressure,
+                map,
+                hrStatus,
+                riskScore,
+                factors
+            };
         }
         
         function displayResults(data, analysis) {
