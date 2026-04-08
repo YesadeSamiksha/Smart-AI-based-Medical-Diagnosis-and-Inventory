@@ -2374,10 +2374,15 @@
         }
         
         function analyzeTrendsAndRender(diagnoses, orders, activities) {
+            // Safety guards
+            diagnoses = Array.isArray(diagnoses) ? diagnoses : [];
+            orders = Array.isArray(orders) ? orders : [];
+            activities = Array.isArray(activities) ? activities : [];
+            
             // --- KPI CARDS ---
             const highRisk = diagnoses.filter(d => d.risk_level === 'high' || d.risk_level === 'critical').length;
-            document.getElementById('trend-total-assessments').textContent = diagnoses.length;
-            document.getElementById('trend-high-risk').textContent = highRisk;
+            if (document.getElementById('trend-total-assessments')) document.getElementById('trend-total-assessments').textContent = diagnoses.length;
+            if (document.getElementById('trend-high-risk')) document.getElementById('trend-high-risk').textContent = highRisk;
             
             // Dominant disease
             const typeCounts = {};
@@ -2386,7 +2391,7 @@
             });
             const dominant = Object.entries(typeCounts).sort((a,b) => b[1]-a[1])[0];
             const diseaseLabels = { diabetes: 'Diabetes', lung: 'Lung Disease', bp: 'Blood Pressure', symptoms: 'Symptom Check' };
-            document.getElementById('trend-dominant-disease').textContent = dominant ? (diseaseLabels[dominant[0]] || dominant[0]) : '—';
+            if (document.getElementById('trend-dominant-disease')) document.getElementById('trend-dominant-disease').textContent = dominant ? (diseaseLabels[dominant[0]] || dominant[0]) : '—';
             
             // Monthly growth (compare last 30 days vs prev 30)
             const now = new Date();
@@ -2396,26 +2401,30 @@
                 return age >= 30*86400000 && age < 60*86400000;
             }).length;
             const growth = prev30 > 0 ? Math.round(((last30 - prev30) / prev30) * 100) : 0;
-            document.getElementById('trend-growth').textContent = (growth >= 0 ? '+' : '') + growth + '%';
-            document.getElementById('trend-growth').className = `stat-big ${growth >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            if (document.getElementById('trend-growth')) {
+                document.getElementById('trend-growth').textContent = (growth >= 0 ? '+' : '') + growth + '%';
+                document.getElementById('trend-growth').className = `stat-big ${growth >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            }
             
             // --- DISEASE TYPE CHART ---
-            const diseaseCtx = document.getElementById('trendDiseaseChart');
-            if (diseaseCtx) {
-                if (trendDiseaseChart) trendDiseaseChart.destroy();
-                trendDiseaseChart = new Chart(diseaseCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.keys(typeCounts).map(k => diseaseLabels[k] || k),
-                        datasets: [{
-                            data: Object.values(typeCounts),
-                            backgroundColor: ['#3b82f6','#8b5cf6','#ef4444','#06b6d4'],
-                            borderColor: 'rgba(0,0,0,0.3)', borderWidth: 2
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ccc' } } } }
-                });
-            }
+            try {
+                const diseaseCtx = document.getElementById('trendDiseaseChart');
+                if (diseaseCtx && Object.keys(typeCounts).length > 0) {
+                    if (trendDiseaseChart) trendDiseaseChart.destroy();
+                    trendDiseaseChart = new Chart(diseaseCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(typeCounts).map(k => diseaseLabels[k] || k),
+                            datasets: [{
+                                data: Object.values(typeCounts),
+                                backgroundColor: ['#3b82f6','#8b5cf6','#ef4444','#06b6d4'],
+                                borderColor: 'rgba(0,0,0,0.3)', borderWidth: 2
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ccc' } } } }
+                    });
+                }
+            } catch(e) { console.warn('Disease chart error:', e.message); }
             
             // --- MONTHLY TREND CHART (last 6 months) ---
             const monthBuckets = {};
@@ -2427,125 +2436,165 @@
                 const key = d.created_at?.substring(0, 7);
                 if (key && monthBuckets.hasOwnProperty(key)) monthBuckets[key]++;
             });
-            const monthCtx = document.getElementById('trendMonthlyChart');
-            if (monthCtx) {
-                if (trendMonthlyChart) trendMonthlyChart.destroy();
-                trendMonthlyChart = new Chart(monthCtx, {
-                    type: 'line',
-                    data: {
-                        labels: Object.keys(monthBuckets).map(k => { const [y,m] = k.split('-'); return new Date(y,m-1).toLocaleString('default',{month:'short',year:'2-digit'}); }),
-                        datasets: [{
-                            label: 'Diagnoses',
-                            data: Object.values(monthBuckets),
-                            borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.15)',
-                            tension: 0.4, fill: true, pointBackgroundColor: '#06b6d4'
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { labels: { color: '#ccc' } } } }
-                });
-            }
+            try {
+                const monthCtx = document.getElementById('trendMonthlyChart');
+                if (monthCtx) {
+                    if (trendMonthlyChart) trendMonthlyChart.destroy();
+                    trendMonthlyChart = new Chart(monthCtx, {
+                        type: 'line',
+                        data: {
+                            labels: Object.keys(monthBuckets).map(k => { const [y,m] = k.split('-'); return new Date(y,m-1).toLocaleString('default',{month:'short',year:'2-digit'}); }),
+                            datasets: [{
+                                label: 'Diagnoses',
+                                data: Object.values(monthBuckets),
+                                borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.15)',
+                                tension: 0.4, fill: true, pointBackgroundColor: '#06b6d4'
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { labels: { color: '#ccc' } } } }
+                    });
+                }
+            } catch(e) { console.warn('Monthly chart error:', e.message); }
             
             // --- RISK CHART ---
             const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
             diagnoses.forEach(d => { if (riskCounts.hasOwnProperty(d.risk_level)) riskCounts[d.risk_level]++; });
-            const riskCtxEl = document.getElementById('trendRiskChart');
-            if (riskCtxEl) {
-                if (trendRiskChart) trendRiskChart.destroy();
-                trendRiskChart = new Chart(riskCtxEl, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Low', 'Medium', 'High', 'Critical'],
-                        datasets: [{
-                            label: 'Cases',
-                            data: [riskCounts.low, riskCounts.medium, riskCounts.high, riskCounts.critical],
-                            backgroundColor: ['#22c55e','#f59e0b','#ef4444','#7f1d1d'],
-                            borderRadius: 6
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af' }, grid: { display: false } }, y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
-                });
-            }
+            try {
+                const riskCtxEl = document.getElementById('trendRiskChart');
+                if (riskCtxEl) {
+                    if (trendRiskChart) trendRiskChart.destroy();
+                    trendRiskChart = new Chart(riskCtxEl, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Low', 'Medium', 'High', 'Critical'],
+                            datasets: [{
+                                label: 'Cases',
+                                data: [riskCounts.low, riskCounts.medium, riskCounts.high, riskCounts.critical],
+                                backgroundColor: ['#22c55e','#f59e0b','#ef4444','#7f1d1d'],
+                                borderRadius: 6
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af' }, grid: { display: false } }, y: { ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+                    });
+                }
+            } catch(e) { console.warn('Risk chart error:', e.message); }
             
             // --- MEDICINE DEMAND PREDICTION ---
-            // Based on diagnosis types, predict what medicines will be needed
+            // Based on diagnosis types + real orders, predict medicines needed
             const medicinePrediction = predictMedicineDemand(typeCounts, riskCounts, orders);
             const predList = document.getElementById('medicinePredictionList');
             if (predList) {
-                predList.innerHTML = medicinePrediction.map(med => `
-                    <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);">
-                        <div>
-                            <div class="font-semibold text-sm">${med.name}</div>
-                            <div class="text-xs text-gray-400">${med.reason}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-bold text-green-400 text-sm">${med.units} units</div>
-                            <div class="text-xs ${med.priority === 'High' ? 'text-red-400' : med.priority === 'Medium' ? 'text-yellow-400' : 'text-gray-400'}">${med.priority} Priority</div>
-                        </div>
-                    </div>`).join('');
+                if (medicinePrediction.length === 0) {
+                    predList.innerHTML = '<div class="text-center text-gray-400 py-4 text-sm">No diagnosis data available yet. Predictions will appear once users complete health assessments.</div>';
+                } else {
+                    predList.innerHTML = medicinePrediction.map(med => `
+                        <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);">
+                            <div>
+                                <div class="font-semibold text-sm">${med.name}</div>
+                                <div class="text-xs text-gray-400">${med.reason}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-green-400 text-sm">${med.units} units</div>
+                                <div class="text-xs ${med.priority === 'High' ? 'text-red-400' : med.priority === 'Medium' ? 'text-yellow-400' : 'text-gray-400'}">${med.priority} Priority</div>
+                            </div>
+                        </div>`).join('');
+                }
             }
             
             // --- AI INSIGHTS ---
-            const insights = generateAIInsights(diagnoses, typeCounts, riskCounts, growth, orders);
+            let insights = [];
+            try {
+                insights = generateAIInsights(diagnoses, typeCounts, riskCounts, growth, orders);
+            } catch(e) {
+                console.warn('AI insights generation error:', e.message);
+                insights = [{ icon: '🏥', title: 'System Ready', detail: 'Insights will appear once diagnosis data is available from real user assessments.' }];
+            }
             const insightsList = document.getElementById('aiInsightsList');
             if (insightsList) {
-                insightsList.innerHTML = insights.map(ins => `
-                    <div class="flex gap-3 p-3 rounded-lg" style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);">
-                        <div class="text-2xl flex-shrink-0">${ins.icon}</div>
-                        <div>
-                            <div class="font-semibold text-sm text-purple-300">${ins.title}</div>
-                            <div class="text-xs text-gray-300 mt-1">${ins.detail}</div>
-                        </div>
-                    </div>`).join('');
+                const safeInsights = Array.isArray(insights) ? insights : [];
+                if (safeInsights.length === 0) {
+                    insightsList.innerHTML = '<div class="text-center text-gray-400 py-4 text-sm">Insights will appear after users complete health assessments.</div>';
+                } else {
+                    insightsList.innerHTML = safeInsights.map(ins => `
+                        <div class="flex gap-3 p-3 rounded-lg" style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);">
+                            <div class="text-2xl flex-shrink-0">${ins.icon}</div>
+                            <div>
+                                <div class="font-semibold text-sm text-purple-300">${ins.title}</div>
+                                <div class="text-xs text-gray-300 mt-1">${ins.detail}</div>
+                            </div>
+                        </div>`).join('');
+                }
             }
             
-            // --- ACTIVITY CHART ---
+            // --- ACTIVITY CHART (diagnoses + user_activity combined) ---
             const activityByDay = {};
             const today = new Date();
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(today); d.setDate(d.getDate() - i);
                 activityByDay[d.toISOString().split('T')[0]] = 0;
             }
-            // Use diagnoses as proxy for activity if no activity table data
+            // Combine diagnoses + activities for chart
             [...diagnoses, ...activities].forEach(item => {
                 const key = item.created_at?.split('T')[0];
                 if (key && activityByDay.hasOwnProperty(key)) activityByDay[key]++;
             });
-            const actCtx = document.getElementById('trendActivityChart');
-            if (actCtx) {
-                if (trendActivityChart) trendActivityChart.destroy();
-                trendActivityChart = new Chart(actCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: Object.keys(activityByDay).map(d => new Date(d).toLocaleDateString('default',{weekday:'short',month:'short',day:'numeric'})),
-                        datasets: [{
-                            label: 'User Actions',
-                            data: Object.values(activityByDay),
-                            backgroundColor: 'rgba(59,130,246,0.6)',
-                            borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af', font: {size:10} }, grid: { display: false } }, y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
-                });
-            }
+            try {
+                const actCtx = document.getElementById('trendActivityChart');
+                if (actCtx) {
+                    if (trendActivityChart) trendActivityChart.destroy();
+                    trendActivityChart = new Chart(actCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(activityByDay).map(d => new Date(d + 'T12:00:00').toLocaleDateString('default',{weekday:'short',month:'short',day:'numeric'})),
+                            datasets: [{
+                                label: 'Health Assessments',
+                                data: Object.values(activityByDay),
+                                backgroundColor: 'rgba(59,130,246,0.6)',
+                                borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#9ca3af', font: {size:10} }, grid: { display: false } }, y: { ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+                    });
+                }
+            } catch(e) { console.warn('Activity chart error:', e.message); }
             
-            // Activity breakdown
+            // Activity breakdown — show unique users and order stats
             const breakdown = document.getElementById('activityBreakdownList');
             if (breakdown) {
-                const totalActivity = Object.values(activityByDay).reduce((s,v) => s+v, 0);
+                const totalAssessments = diagnoses.length;
+                const totalOrders = orders.length;
+                const uniqueUsers = new Set(diagnoses.map(d => d.user_id).filter(Boolean)).size;
+                const pendingOrders = orders.filter(o => o.order_status === 'pending').length;
                 const typeOfActivity = {};
                 activities.forEach(a => { typeOfActivity[a.activity_type] = (typeOfActivity[a.activity_type]||0)+1; });
-                const breakdownItems = Object.entries(typeOfActivity).slice(0,5);
+                const breakdownItems = Object.entries(typeOfActivity).slice(0,3);
                 breakdown.innerHTML = `
-                    <div class="text-sm font-semibold text-gray-300 mb-2">Last 7 Days Activity</div>
-                    ${breakdownItems.length ? breakdownItems.map(([k,v]) => `
+                    <div class="text-sm font-semibold text-gray-300 mb-2">Platform Summary</div>
+                    <div class="flex justify-between text-xs py-1 border-b border-gray-700">
+                        <span class="text-gray-300">Total Assessments</span>
+                        <span class="text-blue-400 font-bold">${totalAssessments}</span>
+                    </div>
+                    <div class="flex justify-between text-xs py-1 border-b border-gray-700">
+                        <span class="text-gray-300">Unique Patients</span>
+                        <span class="text-purple-400 font-bold">${uniqueUsers}</span>
+                    </div>
+                    <div class="flex justify-between text-xs py-1 border-b border-gray-700">
+                        <span class="text-gray-300">Total Orders</span>
+                        <span class="text-green-400 font-bold">${totalOrders}</span>
+                    </div>
+                    <div class="flex justify-between text-xs py-1 border-b border-gray-700">
+                        <span class="text-gray-300">Pending Orders</span>
+                        <span class="text-yellow-400 font-bold">${pendingOrders}</span>
+                    </div>
+                    ${breakdownItems.map(([k,v]) => `
                         <div class="flex justify-between text-xs py-1 border-b border-gray-700">
                             <span class="text-gray-300">${k.replace(/_/g,' ')}</span>
                             <span class="text-blue-400 font-bold">${v}</span>
-                        </div>`).join('') : `<div class="text-xs text-gray-400">Total activity events this week: <span class="text-blue-400 font-bold">${totalActivity}</span></div>`}
+                        </div>`).join('')}
                 `;
             }
             
-            console.log('✅ Trends analysis complete');
+            console.log(`✅ Trends analysis complete — ${diagnoses.length} diagnoses, ${orders.length} orders, ${activities.length} activities`);
         }
         
         function predictMedicineDemand(typeCounts, riskCounts, orders) {

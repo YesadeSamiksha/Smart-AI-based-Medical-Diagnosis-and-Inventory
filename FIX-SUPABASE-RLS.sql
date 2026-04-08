@@ -88,6 +88,11 @@ CREATE POLICY "Allow inventory read" ON inventory
 CREATE POLICY "Allow inventory write" ON inventory
     FOR ALL USING (true);
 
+-- Explicit UPDATE for authenticated users (needed for order stock deduction)
+DROP POLICY IF EXISTS "Allow inventory update" ON inventory;
+CREATE POLICY "Allow inventory update" ON inventory
+    FOR UPDATE USING (true) WITH CHECK (true);
+
 -- ============================================
 -- STEP 5: Fix user_activity - allow anon read
 -- ============================================
