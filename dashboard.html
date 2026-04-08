@@ -80,13 +80,8 @@
                     </a>
                 </li>
                 <li class="nav-item mb-2">
-                    <a href="inventory.html" class="nav-link text-white-50">
-                        <i class="fas fa-boxes me-2"></i> Inventory
-                    </a>
-                </li>
-                <li class="nav-item mb-2">
-                    <a href="admin.html" class="nav-link text-white-50">
-                        <i class="fas fa-user-shield me-2"></i> Admin Panel
+                    <a href="shop.html" class="nav-link text-white-50">
+                        <i class="fas fa-shopping-bag me-2"></i> Shop
                     </a>
                 </li>
                 <li class="nav-item mb-2 mt-4">
@@ -98,7 +93,7 @@
         </nav>
         
         <!-- Main Content -->
-        <main class="flex-grow-1 p-4">
+        <main class="flex-grow-1 p-4 main-content">
             <div class="mb-4">
                 <h2>Welcome back, <span id="userName">User</span>!</h2>
                 <p class="text-white-50">Here's your health overview</p>
@@ -139,23 +134,73 @@
                 </div>
             </div>
             
-            <div class="row g-4">
-                <div class="col-md-6">
+            <!-- Health Trends Section -->
+            <div class="row g-4 mb-4">
+                <div class="col-12">
                     <div class="dashboard-card">
-                        <h5><i class="fas fa-chart-line me-2" style="color: #6366f1;"></i> Recent Assessments</h5>
-                        <div id="recentAssessments">
-                            <p class="text-white-50 small">Loading assessments...</p>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5><i class="fas fa-chart-line me-2" style="color: #22c55e;"></i> Your Health Trends</h5>
+                            <button onclick="loadTrends()" class="btn btn-sm btn-outline-light">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="row" id="healthTrends">
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                    <div class="text-3xl font-bold text-blue-400" id="totalAssessments">0</div>
+                                    <small class="text-white-50">Total Assessments</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                    <div class="text-3xl font-bold" id="healthTrend" style="color: #eab308;">--</div>
+                                    <small class="text-white-50">Health Trend</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                    <div class="text-3xl font-bold text-purple-400" id="mostCommon">--</div>
+                                    <small class="text-white-50">Most Used Check</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                    <div class="text-3xl font-bold text-yellow-400" id="avgRisk">--</div>
+                                    <small class="text-white-50">Avg Risk Score</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="dashboard-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5><i class="fas fa-history me-2" style="color: #6366f1;"></i> Complete History</h5>
+                            <small class="text-white-50" id="historyCount">Loading...</small>
+                        </div>
+                        <div id="fullHistory" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-white-50 small">Loading history...</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <div class="dashboard-card mb-4">
+                        <h5><i class="fas fa-lightbulb me-2" style="color: #eab308;"></i> AI Insights</h5>
+                        <div id="aiInsights">
+                            <p class="text-white-50 small">Analyzing your health data...</p>
+                        </div>
+                    </div>
+                    
                     <div class="dashboard-card">
                         <h5><i class="fas fa-bell me-2" style="color: #6366f1;"></i> Health Tips</h5>
-                        <ul class="text-white-50 small">
-                            <li>Regular exercise helps maintain healthy blood pressure</li>
-                            <li>Monitor blood sugar levels if you have diabetes risk</li>
-                            <li>Avoid smoking to reduce lung cancer risk</li>
+                        <ul class="text-white-50 small list-unstyled">
+                            <li class="mb-2"><i class="fas fa-check text-green-400 me-2"></i>Regular exercise helps maintain healthy blood pressure</li>
+                            <li class="mb-2"><i class="fas fa-check text-green-400 me-2"></i>Monitor blood sugar levels if you have diabetes risk</li>
+                            <li><i class="fas fa-check text-green-400 me-2"></i>Avoid smoking to reduce lung cancer risk</li>
                         </ul>
                     </div>
                 </div>
@@ -169,11 +214,14 @@
     <script src="database.js"></script>
     
     <script>
-        // Initialize Supabase and check auth
+        const API_URL = 'http://localhost:5000/api';
+        
+        // Initialize and check auth
         document.addEventListener('DOMContentLoaded', async function() {
             window.MedAISupabase.initSupabase();
             await checkAuth();
-            await loadRecentAssessments();
+            await loadFullHistory();
+            await loadTrends();
         });
         
         // Check if user is logged in
@@ -189,54 +237,85 @@
             document.getElementById('userName').textContent = user.name || user.email || 'User';
         }
         
-        // Load recent assessments from Supabase
-        async function loadRecentAssessments() {
-            const container = document.getElementById('recentAssessments');
+        // Get current user ID
+        async function getUserId() {
+            try {
+                const user = await window.MedAISupabase.getCurrentUser();
+                return user?.id;
+            } catch {
+                const user = JSON.parse(localStorage.getItem('medai_user') || '{}');
+                return user.id;
+            }
+        }
+        
+        // Load full history
+        async function loadFullHistory() {
+            const container = document.getElementById('fullHistory');
+            const countEl = document.getElementById('historyCount');
             
             try {
-                const { data, error } = await window.MedAIDatabase.getRecentActivity(5);
+                // Try Supabase first
+                const { data, error } = await window.MedAIDatabase.getRecentActivity(50);
                 
                 if (error) throw error;
                 
                 if (!data || data.length === 0) {
-                    container.innerHTML = '<p class="text-white-50 small">No assessments yet. Start your first health check above.</p>';
+                    container.innerHTML = '<p class="text-white-50 small text-center py-4">No history yet. Complete your first health assessment to start tracking.</p>';
+                    countEl.textContent = '0 records';
+                    generateInsights([]);
                     return;
                 }
                 
+                countEl.textContent = `${data.length} records`;
+                generateInsights(data);
+                
+                const typeIcons = {
+                    'diabetes': { icon: 'fa-tint', color: '#f9a8d4', name: 'Diabetes Assessment' },
+                    'lung': { icon: 'fa-lungs', color: '#93c5fd', name: 'Lung Screening' },
+                    'bp': { icon: 'fa-heart-pulse', color: '#fca5a5', name: 'BP Analysis' },
+                    'symptoms': { icon: 'fa-stethoscope', color: '#a78bfa', name: 'Symptom Check' }
+                };
+                
+                const riskStyles = {
+                    'low': { bg: 'rgba(34, 197, 94, 0.2)', color: '#86efac', icon: 'fa-check-circle' },
+                    'medium': { bg: 'rgba(234, 179, 8, 0.2)', color: '#fde047', icon: 'fa-exclamation-circle' },
+                    'high': { bg: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', icon: 'fa-exclamation-triangle' },
+                    'critical': { bg: 'rgba(220, 38, 38, 0.3)', color: '#fecaca', icon: 'fa-times-circle' }
+                };
+                
                 const html = data.map(item => {
-                    const typeIcons = {
-                        'diabetes': 'fa-tint text-pink-400',
-                        'lung': 'fa-lungs text-blue-400',
-                        'bp': 'fa-heart-pulse text-red-400',
-                        'symptoms': 'fa-stethoscope text-purple-400'
-                    };
-                    const typeNames = {
-                        'diabetes': 'Diabetes Assessment',
-                        'lung': 'Lung Cancer Screening',
-                        'bp': 'Blood Pressure Analysis',
-                        'symptoms': 'Symptom Check'
-                    };
-                    const riskColors = {
-                        'low': 'text-green-400',
-                        'medium': 'text-yellow-400',
-                        'high': 'text-red-400',
-                        'critical': 'text-red-600'
-                    };
+                    const type = typeIcons[item.diagnosis_type] || { icon: 'fa-clipboard', color: '#9ca3af', name: item.diagnosis_type };
+                    const risk = riskStyles[item.risk_level] || riskStyles['medium'];
+                    const date = new Date(item.created_at);
+                    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                     
-                    const icon = typeIcons[item.diagnosis_type] || 'fa-clipboard-list text-gray-400';
-                    const name = typeNames[item.diagnosis_type] || item.diagnosis_type;
-                    const riskColor = riskColors[item.risk_level] || 'text-gray-400';
-                    const date = new Date(item.created_at).toLocaleDateString();
+                    // Parse result data for display
+                    let resultText = '';
+                    try {
+                        const result = typeof item.result_data === 'string' ? JSON.parse(item.result_data) : item.result_data;
+                        if (result.prediction) resultText = result.prediction;
+                        else if (result.primary_conditions?.[0]) resultText = result.primary_conditions[0].name;
+                    } catch {}
                     
                     return `
-                        <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(255,255,255,0.03); border-radius: 8px;">
-                            <div>
-                                <i class="fas ${icon} me-2"></i>
-                                <span class="text-white-50 small">${name}</span>
+                        <div class="d-flex align-items-center p-3 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 12px; border-left: 3px solid ${type.color};">
+                            <div class="me-3">
+                                <div class="p-2 rounded-circle" style="background: rgba(255,255,255,0.05);">
+                                    <i class="fas ${type.icon}" style="color: ${type.color}; font-size: 1.2rem;"></i>
+                                </div>
                             </div>
-                            <div class="text-end">
-                                <span class="badge ${riskColor}" style="background: rgba(255,255,255,0.1);">${item.risk_level}</span>
-                                <small class="text-gray-500 d-block">${date}</small>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong class="text-white">${type.name}</strong>
+                                        ${resultText ? `<span class="text-white-50 ms-2">· ${resultText}</span>` : ''}
+                                    </div>
+                                    <span class="badge px-2 py-1" style="background: ${risk.bg}; color: ${risk.color};">
+                                        <i class="fas ${risk.icon} me-1"></i>${item.risk_level || 'unknown'}
+                                    </span>
+                                </div>
+                                <small class="text-white-50">${dateStr} at ${timeStr}</small>
                             </div>
                         </div>
                     `;
@@ -245,13 +324,132 @@
                 container.innerHTML = html;
                 
             } catch (err) {
-                console.error('Error loading assessments:', err);
-                container.innerHTML = '<p class="text-white-50 small">No assessments yet. Start your first health check above.</p>';
+                console.error('Error loading history:', err);
+                
+                // Try Flask API as fallback
+                try {
+                    const userId = await getUserId();
+                    if (userId) {
+                        const response = await fetch(`${API_URL}/user/${userId}/history`);
+                        const data = await response.json();
+                        if (data.history && data.history.length > 0) {
+                            countEl.textContent = `${data.history.length} records`;
+                            // Simplified display for API data
+                            container.innerHTML = data.history.map(item => `
+                                <div class="p-2 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                    <strong class="text-white">${item.diagnosis_type}</strong>
+                                    <span class="badge bg-secondary ms-2">${item.risk_level}</span>
+                                    <small class="text-white-50 d-block">${new Date(item.created_at).toLocaleDateString()}</small>
+                                </div>
+                            `).join('');
+                            return;
+                        }
+                    }
+                } catch {}
+                
+                container.innerHTML = '<p class="text-white-50 small text-center py-4">No history yet. Start an assessment to begin tracking your health.</p>';
+                countEl.textContent = '0 records';
             }
+        }
+        
+        // Load health trends
+        async function loadTrends() {
+            try {
+                const userId = await getUserId();
+                if (!userId) return;
+                
+                const response = await fetch(`${API_URL}/user/${userId}/trends`);
+                const trends = await response.json();
+                
+                document.getElementById('totalAssessments').textContent = trends.total_assessments || 0;
+                
+                const trendEl = document.getElementById('healthTrend');
+                const trendText = trends.health_trend || 'N/A';
+                trendEl.textContent = trendText.replace('_', ' ');
+                
+                if (trendText === 'improving') {
+                    trendEl.style.color = '#22c55e';
+                } else if (trendText === 'worsening') {
+                    trendEl.style.color = '#ef4444';
+                } else {
+                    trendEl.style.color = '#eab308';
+                }
+                
+                document.getElementById('mostCommon').textContent = trends.most_common || '--';
+                document.getElementById('avgRisk').textContent = trends.average_risk || '--';
+                
+            } catch (err) {
+                console.log('Could not load trends from API');
+            }
+        }
+        
+        // Generate AI insights based on history
+        function generateInsights(history) {
+            const container = document.getElementById('aiInsights');
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="text-white-50 small">Complete some health assessments to receive personalized insights.</p>';
+                return;
+            }
+            
+            const insights = [];
+            const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
+            const typeCounts = {};
+            
+            history.forEach(item => {
+                riskCounts[item.risk_level] = (riskCounts[item.risk_level] || 0) + 1;
+                typeCounts[item.diagnosis_type] = (typeCounts[item.diagnosis_type] || 0) + 1;
+            });
+            
+            // Generate insights
+            if (riskCounts.high > 0 || riskCounts.critical > 0) {
+                insights.push({
+                    icon: 'fa-exclamation-triangle',
+                    color: '#ef4444',
+                    text: `You have ${riskCounts.high + riskCounts.critical} high-risk assessments. Consider consulting a healthcare professional.`
+                });
+            }
+            
+            if (history.length >= 3) {
+                const recentRisks = history.slice(0, 3).map(h => h.risk_level);
+                if (recentRisks.every(r => r === 'low')) {
+                    insights.push({
+                        icon: 'fa-smile',
+                        color: '#22c55e',
+                        text: 'Great job! Your recent assessments show low risk. Keep up the healthy lifestyle!'
+                    });
+                }
+            }
+            
+            const mostUsed = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+            if (mostUsed) {
+                const typeNames = { diabetes: 'diabetes', lung: 'lung health', bp: 'blood pressure', symptoms: 'symptoms' };
+                insights.push({
+                    icon: 'fa-chart-pie',
+                    color: '#8b5cf6',
+                    text: `You've focused most on ${typeNames[mostUsed[0]] || mostUsed[0]} (${mostUsed[1]} checks). Consider balancing with other health areas.`
+                });
+            }
+            
+            if (insights.length === 0) {
+                insights.push({
+                    icon: 'fa-info-circle',
+                    color: '#06b6d4',
+                    text: 'Keep tracking your health regularly for more personalized insights!'
+                });
+            }
+            
+            container.innerHTML = insights.map(insight => `
+                <div class="d-flex align-items-start mb-3">
+                    <i class="fas ${insight.icon} me-2 mt-1" style="color: ${insight.color};"></i>
+                    <small class="text-white-50">${insight.text}</small>
+                </div>
+            `).join('');
         }
         
         async function logout() {
             await window.MedAIAuth.signOut();
+            localStorage.removeItem('medai_admin_token');
             window.location.href = 'index.html';
         }
     </script>

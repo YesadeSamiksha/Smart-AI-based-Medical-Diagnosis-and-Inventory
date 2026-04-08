@@ -249,6 +249,77 @@
             background: #ef4444;
             color: white;
         }
+        
+        /* Admin Tabs */
+        .admin-tab-btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #9ca3af;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-tab-btn:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        
+        .admin-tab-btn.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+            color: white;
+        }
+        
+        .admin-section {
+            display: none;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        /* Inventory specific */
+        .stock-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .stock-ok { background: rgba(34, 197, 94, 0.3); color: #86efac; }
+        .stock-low { background: rgba(234, 179, 8, 0.3); color: #fde047; }
+        .stock-out { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        
+        .action-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0 2px;
+        }
+        
+        .btn-edit {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+        
+        .btn-edit:hover {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .btn-delete:hover {
+            background: #ef4444;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -295,85 +366,220 @@
                 </p>
             </div>
             <div class="flex gap-4">
-                <a href="dashboard.html" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl transition-colors">
-                    <i class="fas fa-home mr-2"></i>User Dashboard
-                </a>
                 <button id="logoutBtn" class="logout-btn">
                     <i class="fas fa-sign-out-alt mr-2"></i>Logout
                 </button>
             </div>
         </div>
         
-        <!-- Stats Grid -->
-        <div class="admin-grid">
-            <div class="admin-card">
-                <div class="stat-big text-blue-400" id="totalUsers">0</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-            <div class="admin-card">
-                <div class="stat-big text-purple-400" id="totalDiagnoses">0</div>
-                <div class="stat-label">Total Diagnoses</div>
-            </div>
-            <div class="admin-card">
-                <div class="stat-big text-green-400" id="todayDiagnoses">0</div>
-                <div class="stat-label">Today's Diagnoses</div>
-            </div>
-            <div class="admin-card">
-                <div class="stat-big text-yellow-400" id="highRiskCount">0</div>
-                <div class="stat-label">High Risk Cases</div>
+        <!-- Admin Tabs Navigation -->
+        <div class="mb-6">
+            <div class="flex gap-3 border-b border-gray-700 pb-3">
+                <button class="admin-tab-btn active" data-section="overview">
+                    <i class="fas fa-chart-pie mr-2"></i>Overview
+                </button>
+                <button class="admin-tab-btn" data-section="users">
+                    <i class="fas fa-users mr-2"></i>Users
+                </button>
+                <button class="admin-tab-btn" data-section="inventory">
+                    <i class="fas fa-boxes mr-2"></i>Inventory
+                </button>
             </div>
         </div>
         
-        <!-- Charts Row -->
-        <div class="admin-grid" style="grid-template-columns: 1fr 1fr;">
-            <div class="admin-card">
-                <h3 class="text-xl font-bold mb-4">Risk Distribution</h3>
-                <div class="chart-container">
-                    <canvas id="riskChart"></canvas>
+        <!-- Overview Section -->
+        <div id="section-overview" class="admin-section active">
+            <!-- Stats Grid -->
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <div class="stat-big text-blue-400" id="totalUsers">0</div>
+                    <div class="stat-label">Total Users</div>
                 </div>
-            </div>
-            <div class="admin-card">
-                <h3 class="text-xl font-bold mb-4">Diagnosis Types</h3>
-                <div class="chart-container">
-                    <canvas id="typeChart"></canvas>
+                <div class="admin-card">
+                    <div class="stat-big text-purple-400" id="totalDiagnoses">0</div>
+                    <div class="stat-label">Total Diagnoses</div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Users Management -->
-        <div class="admin-card">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold">User Management</h3>
-                <div class="flex gap-3">
-                    <input type="text" id="userSearch" placeholder="Search users..." 
-                           class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white">
-                    <button onclick="loadUsers()" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+                <div class="admin-card">
+                    <div class="stat-big text-green-400" id="todayDiagnoses">0</div>
+                    <div class="stat-label">Today's Diagnoses</div>
+                </div>
+                <div class="admin-card">
+                    <div class="stat-big text-yellow-400" id="highRiskCount">0</div>
+                    <div class="stat-label">High Risk Cases</div>
                 </div>
             </div>
             
-            <div class="overflow-x-auto">
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Email</th>
-                            <th>Assessments</th>
-                            <th>Last Activity</th>
-                            <th>Risk Summary</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                        <tr>
-                            <td colspan="6" class="text-center text-gray-400 py-8">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading users...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Charts Row -->
+            <div class="admin-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="admin-card">
+                    <h3 class="text-xl font-bold mb-4">Risk Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+                <div class="admin-card">
+                    <h3 class="text-xl font-bold mb-4">Diagnosis Types</h3>
+                    <div class="chart-container">
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
             </div>
+        </div>
+        
+        <!-- Users Section -->
+        <div id="section-users" class="admin-section">
+            <div class="admin-card">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">User Management</h3>
+                    <div class="flex gap-3">
+                        <input type="text" id="userSearch" placeholder="Search users..." 
+                               class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white">
+                        <button onclick="loadUsers()" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Assessments</th>
+                                <th>Last Activity</th>
+                                <th>Risk Summary</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-gray-400 py-8">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading users...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Section -->
+        <div id="section-inventory" class="admin-section">
+            <div class="admin-card mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold"><i class="fas fa-boxes mr-3 text-purple-400"></i>Inventory Management</h3>
+                    <button onclick="openAddItemModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Add New Item
+                    </button>
+                </div>
+                
+                <!-- Inventory Stats -->
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="p-4 rounded-lg" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                        <div class="text-2xl font-bold text-green-400" id="invTotalItems">0</div>
+                        <div class="text-sm text-gray-400">Total Items</div>
+                    </div>
+                    <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <div class="text-2xl font-bold text-blue-400" id="invTotalStock">0</div>
+                        <div class="text-sm text-gray-400">Total Stock</div>
+                    </div>
+                    <div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
+                        <div class="text-2xl font-bold text-yellow-400" id="invLowStock">0</div>
+                        <div class="text-sm text-gray-400">Low Stock</div>
+                    </div>
+                    <div class="p-4 rounded-lg" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <div class="text-2xl font-bold text-red-400" id="invOutOfStock">0</div>
+                        <div class="text-sm text-gray-400">Out of Stock</div>
+                    </div>
+                </div>
+                
+                <!-- Inventory Table -->
+                <div class="overflow-x-auto">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Stock</th>
+                                <th>Price (₹)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-gray-400 py-8">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading inventory...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Item Modal -->
+    <div id="itemModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold" id="itemModalTitle">Add New Item</h3>
+                <button onclick="closeItemModal()" class="text-gray-400 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="itemForm">
+                <input type="hidden" id="itemId">
+                
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Item Name</label>
+                    <input type="text" id="itemName" required
+                           class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Category</label>
+                    <select id="itemCategory" required
+                            class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+                        <option value="">Select Category</option>
+                        <option value="medicines">Medicines</option>
+                        <option value="equipment">Equipment</option>
+                        <option value="supplies">Supplies</option>
+                        <option value="first-aid">First Aid</option>
+                        <option value="vitamins">Vitamins & Supplements</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-400 mb-2">Stock Quantity</label>
+                        <input type="number" id="itemStock" min="0" required
+                               class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-2">Price (₹)</label>
+                        <input type="number" id="itemPrice" min="0" step="0.01" required
+                               class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Description</label>
+                    <textarea id="itemDescription" rows="3"
+                              class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none"></textarea>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button type="button" onclick="closeItemModal()" class="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                        <i class="fas fa-save mr-2"></i>Save Item
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
     
@@ -778,6 +984,202 @@
         // Close modal on outside click
         document.getElementById('userModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
+        });
+        
+        // ===== ADMIN TAB SWITCHING =====
+        document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update button states
+                document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update sections
+                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`section-${this.dataset.section}`).classList.add('active');
+                
+                // Load data for the section
+                if (this.dataset.section === 'inventory') {
+                    loadInventory();
+                }
+            });
+        });
+        
+        // ===== INVENTORY MANAGEMENT =====
+        let inventoryData = [];
+        
+        async function loadInventory() {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+            
+            try {
+                const { data, error } = await window.MedAISupabase.supabase
+                    .from('inventory')
+                    .select('*')
+                    .order('name');
+                
+                if (error) throw error;
+                
+                inventoryData = data || [];
+                renderInventory(inventoryData);
+                updateInventoryStats(inventoryData);
+                
+            } catch (error) {
+                console.error('Failed to load inventory:', error);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load inventory</td></tr>';
+            }
+        }
+        
+        function renderInventory(items) {
+            const tbody = document.getElementById('inventoryTableBody');
+            
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-8">No items in inventory. Click "Add New Item" to get started.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = items.map(item => {
+                const stock = item.quantity || 0;
+                let statusClass, statusText;
+                
+                if (stock === 0) {
+                    statusClass = 'stock-out';
+                    statusText = 'Out of Stock';
+                } else if (stock < 10) {
+                    statusClass = 'stock-low';
+                    statusText = 'Low Stock';
+                } else {
+                    statusClass = 'stock-ok';
+                    statusText = 'In Stock';
+                }
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="font-semibold text-white">${item.name || 'Unnamed'}</div>
+                            ${item.description ? `<small class="text-gray-400">${item.description.substring(0, 50)}...</small>` : ''}
+                        </td>
+                        <td class="text-gray-300 capitalize">${item.category || 'N/A'}</td>
+                        <td class="text-white font-bold">${stock}</td>
+                        <td class="text-green-400">₹${parseFloat(item.price || 0).toFixed(2)}</td>
+                        <td><span class="stock-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button onclick="editItem('${item.id}')" class="action-btn btn-edit" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteItem('${item.id}', '${item.name}')" class="action-btn btn-delete" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function updateInventoryStats(items) {
+            document.getElementById('invTotalItems').textContent = items.length;
+            
+            const totalStock = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            document.getElementById('invTotalStock').textContent = totalStock;
+            
+            const lowStock = items.filter(item => item.quantity > 0 && item.quantity < 10).length;
+            document.getElementById('invLowStock').textContent = lowStock;
+            
+            const outOfStock = items.filter(item => !item.quantity || item.quantity === 0).length;
+            document.getElementById('invOutOfStock').textContent = outOfStock;
+        }
+        
+        function openAddItemModal() {
+            document.getElementById('itemModalTitle').textContent = 'Add New Item';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemModal').style.display = 'flex';
+        }
+        
+        async function editItem(itemId) {
+            const item = inventoryData.find(i => i.id === itemId);
+            if (!item) return;
+            
+            document.getElementById('itemModalTitle').textContent = 'Edit Item';
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemName').value = item.name || '';
+            document.getElementById('itemCategory').value = item.category || '';
+            document.getElementById('itemStock').value = item.quantity || 0;
+            document.getElementById('itemPrice').value = item.price || 0;
+            document.getElementById('itemDescription').value = item.description || '';
+            
+            document.getElementById('itemModal').style.display = 'flex';
+        }
+        
+        function closeItemModal() {
+            document.getElementById('itemModal').style.display = 'none';
+        }
+        
+        document.getElementById('itemForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const itemId = document.getElementById('itemId').value;
+            const itemData = {
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('itemCategory').value,
+                quantity: parseInt(document.getElementById('itemStock').value),
+                price: parseFloat(document.getElementById('itemPrice').value),
+                description: document.getElementById('itemDescription').value
+            };
+            
+            try {
+                if (itemId) {
+                    // Update existing
+                    const { error } = await window.MedAISupabase.supabase
+                        .from('inventory')
+                        .update(itemData)
+                        .eq('id', itemId);
+                    
+                    if (error) throw error;
+                    alert('✅ Item updated successfully!');
+                } else {
+                    // Insert new
+                    const { error } = await window.MedAISupabase.supabase
+                        .from('inventory')
+                        .insert([itemData]);
+                    
+                    if (error) throw error;
+                    alert('✅ Item added successfully!');
+                }
+                
+                closeItemModal();
+                loadInventory();
+                
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('❌ Failed to save item: ' + error.message);
+            }
+        });
+        
+        async function deleteItem(itemId, itemName) {
+            if (!confirm(`Are you sure you want to delete "${itemName}"?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const { error } = await window.MedAISupabase.supabase
+                    .from('inventory')
+                    .delete()
+                    .eq('id', itemId);
+                
+                if (error) throw error;
+                
+                alert('✅ Item deleted successfully!');
+                loadInventory();
+                
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('❌ Failed to delete item: ' + error.message);
+            }
+        }
+        
+        // Close item modal on outside click
+        document.getElementById('itemModal').addEventListener('click', function(e) {
+            if (e.target === this) closeItemModal();
         });
     </script>
     

@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Shop - MedAI</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="ballpit.css">
+    
+    <style>
+        body { background: #0a0a0f; color: white; min-height: 100vh; }
+        
+        .shop-container { max-width: 1400px; margin: 100px auto 50px; padding: 20px; position: relative; z-index: 10; }
+        
+        .shop-header {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 32px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .category-pills {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 24px 0;
+        }
+        
+        .category-pill {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .category-pill:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+        }
+        
+        .category-pill.active {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: #8b5cf6;
+            color: white;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+        
+        .product-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: white;
+        }
+        
+        .product-category {
+            font-size: 12px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .product-description {
+            font-size: 14px;
+            color: #d1d5db;
+            margin-bottom: 16px;
+            height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+        
+        .product-price {
+            font-size: 24px;
+            font-weight: 700;
+            color: #22c55e;
+        }
+        
+        .stock-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .stock-ok { background: rgba(34, 197, 94, 0.3); color: #86efac; }
+        .stock-low { background: rgba(234, 179, 8, 0.3); color: #fde047; }
+        .stock-out { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        
+        .btn-add-cart {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 12px;
+        }
+        
+        .btn-add-cart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-add-cart:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .cart-icon {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        .cart-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .cart-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .cart-sidebar {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: rgba(20, 20, 30, 0.98);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 24px;
+            transition: right 0.3s ease;
+            z-index: 200;
+            overflow-y: auto;
+        }
+        
+        .cart-sidebar.open {
+            right: 0;
+        }
+        
+        .cart-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 16px;
+        }
+        
+        .cart-item-image {
+            width: 60px;
+            height: 60px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .cart-item-details {
+            flex: 1;
+        }
+        
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        
+        .qty-btn {
+            width: 28px;
+            height: 28px;
+            background: rgba(139, 92, 246, 0.3);
+            border: 1px solid #8b5cf6;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qty-btn:hover {
+            background: #8b5cf6;
+        }
+        
+        .cart-total {
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid #8b5cf6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+        
+        .btn-checkout {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-checkout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+        }
+        
+        .empty-cart {
+            text-align: center;
+            padding: 48px 20px;
+            color: #9ca3af;
+        }
+        
+        .empty-cart i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="ballpitCanvas"></canvas>
+    
+    <div class="shop-container">
+        <!-- Header -->
+        <div class="shop-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="dashboard.html" class="text-gray-400 hover:text-white mb-2 d-inline-block">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </a>
+                    <h1 class="text-4xl font-bold mb-2">
+                        <i class="fas fa-shopping-bag mr-3 text-purple-400"></i>Medical Shop
+                    </h1>
+                    <p class="text-gray-400">Browse and purchase medical supplies & medications</p>
+                </div>
+                <div class="text-end">
+                    <div class="text-sm text-gray-400">Welcome,</div>
+                    <div class="text-lg font-bold" id="userName">User</div>
+                </div>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="category-pills">
+                <button class="category-pill active" data-category="all">All Products</button>
+                <button class="category-pill" data-category="medicines">Medicines</button>
+                <button class="category-pill" data-category="equipment">Equipment</button>
+                <button class="category-pill" data-category="supplies">Supplies</button>
+                <button class="category-pill" data-category="first-aid">First Aid</button>
+                <button class="category-pill" data-category="vitamins">Vitamins & Supplements</button>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="mt-4">
+                <input type="text" id="searchInput" placeholder="Search products..." 
+                       class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div id="productsGrid" class="products-grid">
+            <div class="col-span-full text-center py-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-purple-400 mb-4"></i>
+                <p class="text-gray-400">Loading products...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cart Icon -->
+    <div class="cart-icon" onclick="toggleCart()">
+        <i class="fas fa-shopping-cart"></i>
+        <div class="cart-badge" id="cartBadge">0</div>
+    </div>
+    
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="d-flex justify-content-between align-items-center mb-6">
+            <h3 class="text-2xl font-bold"><i class="fas fa-shopping-cart mr-2"></i>Your Cart</h3>
+            <button onclick="toggleCart()" class="text-gray-400 hover:text-white text-2xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div id="cartItems"></div>
+        
+        <div id="cartTotalSection" style="display: none;">
+            <div class="cart-total">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-gray-400">Subtotal:</span>
+                    <span class="font-bold" id="cartSubtotal">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-gray-400">Delivery:</span>
+                    <span class="font-bold" id="cartDelivery">₹50.00</span>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 12px 0;">
+                <div class="d-flex justify-content-between">
+                    <span class="text-lg font-bold">Total:</span>
+                    <span class="text-xl font-bold text-green-400" id="cartTotal">₹50.00</span>
+                </div>
+            </div>
+            
+            <button class="btn-checkout" onclick="checkout()">
+                <i class="fas fa-check mr-2"></i>Proceed to Checkout
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        let allProducts = [];
+        let cart = JSON.parse(localStorage.getItem('medai_cart') || '[]');
+        let currentCategory = 'all';
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            window.MedAISupabase.initSupabase();
+            await checkAuth();
+            await loadProducts();
+            renderCart();
+        });
+        
+        async function checkAuth() {
+            const isAuth = await window.MedAIAuth.checkAuthState();
+            if (!isAuth) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const user = JSON.parse(localStorage.getItem('medai_user') || '{}');
+            document.getElementById('userName').textContent = user.name || user.email || 'User';
+        }
+        
+        async function loadProducts() {
+            try {
+                const { data, error } = await window.MedAISupabase.supabase
+                    .from('inventory')
+                    .select('*')
+                    .order('name');
+                
+                if (error) throw error;
+                
+                allProducts = data || [];
+                renderProducts(allProducts);
+                
+            } catch (error) {
+                console.error('Failed to load products:', error);
+                document.getElementById('productsGrid').innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-400">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>Failed to load products. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderProducts(products) {
+            const grid = document.getElementById('productsGrid');
+            
+            if (!products || products.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-box-open text-4xl text-gray-600 mb-4"></i>
+                        <p class="text-gray-400">No products available</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const icons = {
+                medicines: 'fa-pills',
+                equipment: 'fa-stethoscope',
+                supplies: 'fa-box',
+                'first-aid': 'fa-first-aid',
+                vitamins: 'fa-capsules'
+            };
+            
+            grid.innerHTML = products.map(product => {
+                const stock = product.quantity || 0;
+                const icon = icons[product.category] || 'fa-box';
+                
+                let statusClass, statusText;
+                if (stock === 0) {
+                    statusClass = 'stock-out';
+                    statusText = 'Out of Stock';
+                } else if (stock < 10) {
+                    statusClass = 'stock-low';
+                    statusText = `Only ${stock} left`;
+                } else {
+                    statusClass = 'stock-ok';
+                    statusText = 'In Stock';
+                }
+                
+                return `
+                    <div class="product-card">
+                        <div class="product-image">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="product-category">${product.category || 'General'}</div>
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-description">${product.description || 'No description available'}</div>
+                        <div class="product-footer">
+                            <div class="product-price">₹${parseFloat(product.price || 0).toFixed(2)}</div>
+                            <span class="stock-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <button class="btn-add-cart" onclick="addToCart('${product.id}')" ${stock === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-cart-plus mr-2"></i>${stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Category filter
+        document.querySelectorAll('.category-pill').forEach(pill => {
+            pill.addEventListener('click', function() {
+                document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                
+                currentCategory = this.dataset.category;
+                filterProducts();
+            });
+        });
+        
+        // Search
+        document.getElementById('searchInput').addEventListener('input', function() {
+            filterProducts();
+        });
+        
+        function filterProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = allProducts;
+            
+            // Filter by category
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(p => p.category === currentCategory);
+            }
+            
+            // Filter by search
+            if (searchTerm) {
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) ||
+                    (p.description && p.description.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            renderProducts(filtered);
+        }
+        
+        // Cart functions
+        function addToCart(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product || product.quantity === 0) return;
+            
+            const existingItem = cart.find(item => item.id === productId);
+            
+            if (existingItem) {
+                if (existingItem.quantity < product.quantity) {
+                    existingItem.quantity++;
+                } else {
+                    alert('Cannot add more - stock limit reached');
+                    return;
+                }
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    quantity: 1,
+                    maxStock: product.quantity,
+                    category: product.category
+                });
+            }
+            
+            saveCart();
+            renderCart();
+            
+            // Show feedback
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Added!';
+            btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+            }, 1000);
+        }
+        
+        function updateCartQuantity(productId, change) {
+            const item = cart.find(i => i.id === productId);
+            if (!item) return;
+            
+            item.quantity += change;
+            
+            if (item.quantity <= 0) {
+                cart = cart.filter(i => i.id !== productId);
+            } else if (item.quantity > item.maxStock) {
+                item.quantity = item.maxStock;
+                alert('Stock limit reached');
+            }
+            
+            saveCart();
+            renderCart();
+        }
+        
+        function removeFromCart(productId) {
+            cart = cart.filter(i => i.id !== productId);
+            saveCart();
+            renderCart();
+        }
+        
+        function saveCart() {
+            localStorage.setItem('medai_cart', JSON.stringify(cart));
+        }
+        
+        function renderCart() {
+            const cartItems = document.getElementById('cartItems');
+            const cartBadge = document.getElementById('cartBadge');
+            const totalSection = document.getElementById('cartTotalSection');
+            
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartBadge.textContent = totalItems;
+            
+            if (cart.length === 0) {
+                cartItems.innerHTML = `
+                    <div class="empty-cart">
+                        <i class="fas fa-shopping-cart"></i>
+                        <p>Your cart is empty</p>
+                        <small>Add products to get started</small>
+                    </div>
+                `;
+                totalSection.style.display = 'none';
+                return;
+            }
+            
+            const icons = {
+                medicines: 'fa-pills',
+                equipment: 'fa-stethoscope',
+                supplies: 'fa-box',
+                'first-aid': 'fa-first-aid',
+                vitamins: 'fa-capsules'
+            };
+            
+            cartItems.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div class="cart-item-image">
+                        <i class="fas ${icons[item.category] || 'fa-box'}"></i>
+                    </div>
+                    <div class="cart-item-details">
+                        <div class="font-semibold">${item.name}</div>
+                        <div class="text-green-400 font-bold">₹${parseFloat(item.price).toFixed(2)}</div>
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="updateCartQuantity('${item.id}', -1)">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <span class="font-bold">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateCartQuantity('${item.id}', 1)">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="qty-btn" onclick="removeFromCart('${item.id}')" style="margin-left: auto; border-color: #ef4444;">
+                                <i class="fas fa-trash text-red-400"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Calculate totals
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const delivery = subtotal > 0 ? 50 : 0;
+            const total = subtotal + delivery;
+            
+            document.getElementById('cartSubtotal').textContent = `₹${subtotal.toFixed(2)}`;
+            document.getElementById('cartDelivery').textContent = `₹${delivery.toFixed(2)}`;
+            document.getElementById('cartTotal').textContent = `₹${total.toFixed(2)}`;
+            
+            totalSection.style.display = 'block';
+        }
+        
+        function toggleCart() {
+            document.getElementById('cartSidebar').classList.toggle('open');
+        }
+        
+        function checkout() {
+            if (cart.length === 0) {
+                alert('Your cart is empty');
+                return;
+            }
+            
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 50;
+            
+            if (confirm(`Proceed to checkout?\n\nTotal: ₹${total.toFixed(2)}\n\nThis is a demo - no actual payment will be processed.`)) {
+                alert('✅ Order placed successfully!\n\nThank you for your order. This is a demo system.');
+                cart = [];
+                saveCart();
+                renderCart();
+                toggleCart();
+            }
+        }
+    </script>
+    
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="ballpit.js"></script>
+</body>
+</html>
