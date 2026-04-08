@@ -932,7 +932,7 @@
                         <div class="history-item">
                             <div>
                                 <div class="font-semibold">${(item.diagnosis_type || 'unknown').charAt(0).toUpperCase() + (item.diagnosis_type || '').slice(1)}</div>
-                                <div class="text-sm text-gray-400">${formatDate(item.created_at)}</div>
+                        <div class="text-sm text-gray-400">${formatDate(item.created_at)}</div>
                             </div>
                             <span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span>
                         </div>
@@ -943,20 +943,6 @@
                 console.error('Error loading user details:', err);
                 document.getElementById('trendsSummary').innerHTML = '<p class="col-span-4 text-center text-red-400">Failed to load trends</p>';
                 document.getElementById('userHistory').innerHTML = '<p class="text-center text-red-400 py-8">Failed to load history</p>';
-            }
-        }
-                            </div>
-                            <span class="risk-badge risk-${item.risk_level || 'medium'}">${item.risk_level || 'unknown'}</span>
-                        </div>
-                    `).join('');
-                }
-                
-                // Render trend chart
-                renderUserTrendChart(trends.chart_data);
-                
-            } catch (error) {
-                console.error('Failed to load user details:', error);
-                document.getElementById('userHistory').innerHTML = '<p class="text-center text-red-400 py-8">Failed to load data</p>';
             }
         }
         
