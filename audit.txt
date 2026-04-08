@@ -1,0 +1,8 @@
+LINE 898: async function verifyAdminAuth() {
+LINE 931: async function logUserActivity(activityType, activityData = {}) {
+LINE 1454: const authResult = await verifyAdminAuth();
+LINE 1611: await logUserActivity('admin_view_users', {
+LINE 1794: async function logUserActivity(activityType, activityData = {}) {
+LINE 1799: const { data: { user } } = await supabase.auth.getUser();
+LINE 2213: const authResult = await verifyAdminAuth();
+LINE 2244: await logUserActivity('admin_view_orders', { order_count: allOrdersData.length });

@@ -1,0 +1,61 @@
+﻿
+LineNumber Line                                                                              
+---------- ----                                                                              
+       879         function getSupabaseClient() {                                            
+       898         async function verifyAdminAuth() {                                        
+       931         async function logUserActivity(activityType, activityData = {}) {         
+       947         async function loadUserActivityFromTable() {                              
+      1004         // Helper function to determine maximum risk level                        
+      1005         function getMaxRiskLevel(riskSummary) {                                   
+      1046         async function verifyToken(token) {                                       
+      1064         async function showDashboard(email) {                                     
+      1104         function showMockDashboardData() {                                        
+      1136         function showMockOrderData() {                                            
+      1189         async function loadStatsWithFallback() {                                  
+      1198         async function loadUsersWithFallback() {                                  
+      1207         async function loadOrdersWithFallback() {                                 
+      1235         async function loadStats() {                                              
+      1321         function renderCharts(data) {                                             
+      1425         async function loadUsers() {                                              
+      1600                     console.warn('⚠️ renderUserActivityChart function not found');
+      1607                     console.warn('⚠️ renderUsersTable function not found');       
+      1650         function showMockUserData() {                                             
+      1706         function showMockOrderData() {                                            
+      1758         async function loadUserActivityFromTable() {                              
+      1794         async function logUserActivity(activityType, activityData = {}) {         
+      1817         function getMaxRiskLevel(riskSummary) {                                   
+      1826         function renderUserActivityChart(last7Days) {                             
+      1878         function renderUsersTable(users) {                                        
+      1923         function filterUsers(searchTerm) {                                        
+      1933         function filterUsersByRisk(riskLevel) {                                   
+      1946         function exportUsersCSV() {                                               
+      1972         function formatDate(dateStr) {                                            
+      1978         async function viewUserDetails(userId) {                                  
+      2104         function renderUserTrendChart(chartData) {                                
+      2148         function closeModal() {                                                   
+      2200         async function loadOrders() {                                             
+      2252         function updateOrderStats(orders) {                                       
+      2265         function renderOrdersTable(orders) {                                      
+      2330         function filterOrders(status) {                                           
+      2339         async function updateOrderStatus(orderId, newStatus) {                    
+      2367         async function loadInventory() {                                          
+      2393         function renderInventory(items) {                                         
+      2439         function updateInventoryStats(items) {                                    
+      2452         function openAddItemModal() {                                             
+      2459         async function editItem(itemId) {                                         
+      2474         function closeItemModal() {                                               
+      2522         async function deleteItem(itemId, itemName) {                             
+      2557         async function initAIAgent() {                                            
+      2574         function toggleAIAgent(enabled) {                                         
+      2590         function startAIAgent() {                                                 
+      2605         function stopAIAgent() {                                                  
+      2614         function updateAIAgentStatus() {                                          
+      2624         async function runAIAgent() {                                             
+      2689         async function createAutoReorder(item, isUrgent = false) {                
+      2739         async function generateAIInsights(inventory, lowStock, outOfStock) {      
+      2804         async function updateAIStats() {                                          
+      2834         async function loadAIActivityLog() {                                      
+      2902         function addAILog(message, type = 'info') {                               
+
+
+

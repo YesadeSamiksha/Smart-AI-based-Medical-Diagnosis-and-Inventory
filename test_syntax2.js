@@ -1,953 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - MedAI</title>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
-    <!-- Redirect file:// to localhost:8080 (required for ES modules & CORS) -->
-    <script>
-        if (window.location.protocol === 'file:') {
-            const path = window.location.pathname.replace(/^\/[A-Za-z]:\//, '/').replace(/\\/g, '/');
-            const fileName = window.location.pathname.split('/').pop() || 'admin-v2.html';
-            window.location.replace('http://localhost:8080/' + fileName);
-        }
-    </script>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ballpit.css">
-    
-    <style>
-        body { background: #0a0a0f; color: #ffffff; min-height: 100vh; }
-        
-        /* Login Modal */
-        .login-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
-        .login-card {
-            background: rgba(30, 30, 40, 0.95);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 24px;
-            padding: 48px;
-            max-width: 420px;
-            width: 90%;
-            backdrop-filter: blur(20px);
-        }
-        
-        .login-card h2 {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        
-        .login-input {
-            width: 100%;
-            padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: white;
-            font-size: 15px;
-            margin-bottom: 16px;
-        }
-        
-        .login-input:focus {
-            outline: none;
-            border-color: #8b5cf6;
-        }
-        
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3); }
-        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .login-error {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid #ef4444;
-            padding: 12px;
-            border-radius: 8px;
-            color: #fca5a5;
-            margin-bottom: 16px;
-            display: none;
-        }
-        
-        /* Admin Dashboard */
-        .admin-container { max-width: 1400px; margin: 100px auto 50px; padding: 20px; display: none; }
-        
-        .admin-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .admin-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 24px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .stat-big { font-size: 40px; font-weight: 700; margin-bottom: 4px; }
-        .stat-label { color: #9ca3af; font-size: 14px; }
-        
-        .chart-container { height: 280px; margin-top: 16px; }
-        
-        /* Users Table */
-        .users-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .users-table th, .users-table td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .users-table th {
-            background: rgba(139, 92, 246, 0.2);
-            font-weight: 600;
-            color: #a78bfa;
-        }
-        
-        .users-table tr:hover {
-            background: rgba(255, 255, 255, 0.03);
-        }
-        
-        .view-btn {
-            padding: 6px 14px;
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid #8b5cf6;
-            border-radius: 8px;
-            color: #a78bfa;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .view-btn:hover {
-            background: #8b5cf6;
-            color: white;
-        }
-        
-        /* User Detail Modal */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 500;
-        }
-        
-        .modal-content {
-            background: rgba(20, 20, 30, 0.98);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 20px;
-            padding: 32px;
-            max-width: 800px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .trend-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-        }
-        
-        .trend-value {
-            font-size: 28px;
-            font-weight: 700;
-        }
-        
-        .trend-label {
-            font-size: 12px;
-            color: #9ca3af;
-        }
-        
-        .trend-improving { color: #22c55e; }
-        .trend-stable { color: #eab308; }
-        .trend-worsening { color: #ef4444; }
-        
-        .history-item {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .risk-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .risk-low { background: rgba(34, 197, 94, 0.3); color: #86efac; }
-        .risk-medium { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-        .risk-high { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
-        
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-        .tab-btn {
-            padding: 10px 20px;
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            color: #9ca3af;
-            cursor: pointer;
-        }
-        .tab-btn.active {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
-            color: white;
-        }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-        }
-        
-        .logout-btn {
-            padding: 10px 24px;
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid #ef4444;
-            border-radius: 10px;
-            color: #fca5a5;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .logout-btn:hover {
-            background: #ef4444;
-            color: white;
-        }
-        
-        /* Admin Tabs */
-        .admin-tab-btn {
-            padding: 12px 24px;
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            color: #9ca3af;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .admin-tab-btn:hover {
-            background: rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.3);
-        }
-        
-        .admin-tab-btn.active {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
-            color: white;
-        }
-        
-        .admin-section {
-            display: none;
-        }
-        
-        .admin-section.active {
-            display: block;
-        }
-        
-        /* Inventory specific */
-        .stock-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .stock-ok { background: rgba(34, 197, 94, 0.3); color: #86efac; }
-        .stock-low { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-        .stock-out { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
-        
-        .action-btn {
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-edit {
-            background: rgba(59, 130, 246, 0.2);
-            color: #93c5fd;
-        }
-        
-        .btn-edit:hover {
-            background: rgba(59, 130, 246, 0.4);
-        }
-        
-        .btn-delete {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-        }
-        
-        .btn-delete:hover {
-            background: rgba(239, 68, 68, 0.4);
-        }
-        
-        /* Toggle Switch */
-        .toggle-checkbox {
-            appearance: none;
-            width: 50px;
-            height: 26px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 13px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .toggle-checkbox:checked {
-            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-            border-color: #8b5cf6;
-        }
-        
-        .toggle-checkbox::before {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: white;
-            top: 2px;
-            left: 2px;
-            transition: all 0.3s ease;
-        }
-        
-        .toggle-checkbox:checked::before {
-            transform: translateX(24px);
-        }
-        
-        /* AI Agent Status */
-        .ai-log-item {
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 3px solid;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-        
-        .ai-log-success {
-            border-color: #22c55e;
-        }
-        
-        .ai-log-warning {
-            border-color: #eab308;
-        }
-        
-        .ai-log-info {
-            border-color: #3b82f6;
-        }
-        
-        .btn-edit {
-            background: rgba(59, 130, 246, 0.2);
-            color: #93c5fd;
-        }
-        
-        .btn-edit:hover {
-            background: #3b82f6;
-            color: white;
-        }
-        
-        .btn-delete {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-        }
-        
-        .btn-delete:hover {
-            background: #ef4444;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <canvas id="ballpitCanvas"></canvas>
-    
-    <!-- Login Overlay - Shown only while verifying token -->
-    <div id="loginOverlay" class="login-overlay">
-        <div class="login-card text-center">
-            <i class="fas fa-spinner fa-spin text-5xl text-purple-400 mb-4"></i>
-            <h2>Verifying Access</h2>
-            <p class="text-gray-400">Please wait...</p>
-        </div>
-    </div>
-    
-    <!-- Admin Dashboard -->
-    <div id="adminDashboard" class="admin-container" style="position: relative; z-index: 1;">
-        <div class="admin-header">
-            <div>
-                <h1 class="text-4xl font-bold mb-2">Admin Dashboard</h1>
-                <p class="text-gray-400">
-                    <span id="adminEmailDisplay">admin@medai.com</span> · 
-                    <span id="lastLogin">Last login: Just now</span>
-                </p>
-            </div>
-            <div class="flex gap-4">
-                <button id="logoutBtn" class="logout-btn">
-                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                </button>
-            </div>
-        </div>
-        
-        <!-- Admin Tabs Navigation -->
-        <div class="mb-6">
-            <div class="flex gap-3 border-b border-gray-700 pb-3">
-                <button class="admin-tab-btn active" data-section="overview">
-                    <i class="fas fa-chart-pie mr-2"></i>Overview
-                </button>
-                <button class="admin-tab-btn" data-section="users">
-                    <i class="fas fa-users mr-2"></i>Users
-                </button>
-                <button class="admin-tab-btn" data-section="orders">
-                    <i class="fas fa-shopping-cart mr-2"></i>Orders
-                </button>
-                <button class="admin-tab-btn" data-section="inventory">
-                    <i class="fas fa-boxes mr-2"></i>Inventory
-                </button>
-                <button class="admin-tab-btn" data-section="trends">
-                    <i class="fas fa-chart-line mr-2"></i>Trends & Predictions
-                </button>
-            </div>
-        </div>
-        
-        <!-- Overview Section -->
-        <div id="section-overview" class="admin-section active">
-            <!-- Stats Grid -->
-            <div class="admin-grid">
-                <div class="admin-card">
-                    <div class="stat-big text-blue-400" id="totalUsers">0</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                <div class="admin-card">
-                    <div class="stat-big text-purple-400" id="totalDiagnoses">0</div>
-                    <div class="stat-label">Total Diagnoses</div>
-                </div>
-                <div class="admin-card">
-                    <div class="stat-big text-green-400" id="todayDiagnoses">0</div>
-                    <div class="stat-label">Today's Diagnoses</div>
-                </div>
-                <div class="admin-card">
-                    <div class="stat-big text-yellow-400" id="highRiskCount">0</div>
-                    <div class="stat-label">High Risk Cases</div>
-                </div>
-            </div>
-            
-            <!-- Charts Row -->
-            <div class="admin-grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="admin-card">
-                    <h3 class="text-xl font-bold mb-4">Risk Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="riskChart"></canvas>
-                    </div>
-                </div>
-                <div class="admin-card">
-                    <h3 class="text-xl font-bold mb-4">Diagnosis Types</h3>
-                    <div class="chart-container">
-                        <canvas id="typeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Users Section -->
-        <div id="section-users" class="admin-section">
-            <!-- User Analytics Cards -->
-            <div class="admin-grid mb-6">
-                <div class="admin-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));">
-                    <div class="stat-big text-blue-400" id="usersTotalCount">0</div>
-                    <div class="stat-label">Registered Users</div>
-                </div>
-                <div class="admin-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));">
-                    <div class="stat-big text-green-400" id="usersActiveToday">0</div>
-                    <div class="stat-label">Active Today</div>
-                </div>
-                <div class="admin-card" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05));">
-                    <div class="stat-big text-purple-400" id="usersWithAssessments">0</div>
-                    <div class="stat-label">Users with Assessments</div>
-                </div>
-                <div class="admin-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));">
-                    <div class="stat-big text-red-400" id="usersHighRisk">0</div>
-                    <div class="stat-label">High Risk Users</div>
-                </div>
-            </div>
-            
-            <!-- User Activity Chart -->
-            <div class="admin-card mb-6">
-                <h3 class="text-xl font-bold mb-4"><i class="fas fa-chart-area mr-2 text-purple-400"></i>User Activity (Last 7 Days)</h3>
-                <div class="chart-container" style="height: 200px;">
-                    <canvas id="userActivityChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="admin-card">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold"><i class="fas fa-users mr-2 text-purple-400"></i>User Management</h3>
-                    <div class="flex gap-3">
-                        <input type="text" id="userSearch" placeholder="Search users..." 
-                               class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white"
-                               onkeyup="filterUsers(this.value)">
-                        <select id="userFilter" class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white" onchange="filterUsersByRisk(this.value)">
-                            <option value="all">All Users</option>
-                            <option value="high">High Risk</option>
-                            <option value="medium">Medium Risk</option>
-                            <option value="low">Low Risk</option>
-                            <option value="none">No Assessments</option>
-                        </select>
-                        <button onclick="loadUsers()" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                        <button onclick="exportUsersCSV()" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700" title="Export to CSV">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Registered</th>
-                                <th>Assessments</th>
-                                <th>Last Activity</th>
-                                <th>Risk Summary</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            <tr>
-                                <td colspan="7" class="text-center text-gray-400 py-8">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading users...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Orders Section -->
-        <div id="section-orders" class="admin-section">
-            <div class="admin-card">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold"><i class="fas fa-shopping-cart mr-3 text-blue-400"></i>Customer Orders</h3>
-                    <div class="flex gap-3">
-                        <select id="orderStatusFilter" class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white" onchange="filterOrders(this.value)">
-                            <option value="all">All Orders</option>
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <button onclick="loadOrders()" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Order Stats -->
-                <div class="grid grid-cols-4 gap-4 mb-6">
-                    <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <div class="text-2xl font-bold text-blue-400" id="ordersTotal">0</div>
-                        <div class="text-sm text-gray-400">Total Orders</div>
-                    </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
-                        <div class="text-2xl font-bold text-yellow-400" id="ordersPending">0</div>
-                        <div class="text-sm text-gray-400">Pending</div>
-                    </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
-                        <div class="text-2xl font-bold text-green-400" id="ordersDelivered">0</div>
-                        <div class="text-sm text-gray-400">Delivered</div>
-                    </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
-                        <div class="text-2xl font-bold text-purple-400" id="ordersRevenue">₹0</div>
-                        <div class="text-sm text-gray-400">Total Revenue</div>
-                    </div>
-                </div>
-                
-                <!-- Orders Table -->
-                <div class="overflow-x-auto">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Customer</th>
-                                <th>Items</th>
-                                <th>Total</th>
-                                <th>Payment</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ordersTableBody">
-                            <tr>
-                                <td colspan="8" class="text-center text-gray-400 py-8">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading orders...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Inventory Section -->
-        <div id="section-inventory" class="admin-section">
-            <!-- AI Agent Control Panel -->
-            <div class="admin-card mb-6" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-                            <i class="fas fa-robot text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold">AI Inventory Agent</h3>
-                            <p class="text-sm text-gray-400" id="aiAgentStatus">Initializing...</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <span class="text-sm text-gray-400">Auto-Reorder</span>
-                            <input type="checkbox" id="aiAgentToggle" class="toggle-checkbox" onchange="toggleAIAgent(this.checked)">
-                        </label>
-                        <button onclick="runAIAgent()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
-                            <i class="fas fa-sync-alt mr-2"></i>Run Now
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- AI Agent Stats -->
-                <div class="grid grid-cols-4 gap-4 mb-4">
-                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
-                        <div class="text-xl font-bold text-blue-400" id="aiItemsMonitored">0</div>
-                        <div class="text-xs text-gray-400">Items Monitored</div>
-                    </div>
-                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
-                        <div class="text-xl font-bold text-yellow-400" id="aiLowStockAlerts">0</div>
-                        <div class="text-xs text-gray-400">Low Stock Alerts</div>
-                    </div>
-                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
-                        <div class="text-xl font-bold text-green-400" id="aiAutoOrders">0</div>
-                        <div class="text-xs text-gray-400">Auto Orders</div>
-                    </div>
-                    <div class="p-3 rounded-lg bg-black bg-opacity-30">
-                        <div class="text-xl font-bold text-purple-400" id="aiLastCheck">Never</div>
-                        <div class="text-xs text-gray-400">Last Check</div>
-                    </div>
-                </div>
-                
-                <!-- AI Insights -->
-                <div id="aiInsights" class="text-sm">
-                    <div class="text-gray-400 italic">
-                        <i class="fas fa-lightbulb mr-2 text-yellow-400"></i>
-                        Enable AI Agent to get intelligent inventory insights and automatic reordering
-                    </div>
-                </div>
-            </div>
-            
-            <div class="admin-card mb-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold"><i class="fas fa-boxes mr-3 text-purple-400"></i>Inventory Management</h3>
-                    <button onclick="openAddItemModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
-                        <i class="fas fa-plus mr-2"></i>Add New Item
-                    </button>
-                </div>
-                
-                <!-- Inventory Stats -->
-                <div class="grid grid-cols-4 gap-4 mb-6">
-                    <div class="p-4 rounded-lg" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
-                        <div class="text-2xl font-bold text-green-400" id="invTotalItems">0</div>
-                        <div class="text-sm text-gray-400">Total Items</div>
-                    </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <div class="text-2xl font-bold text-blue-400" id="invTotalStock">0</div>
-                        <div class="text-sm text-gray-400">Total Stock</div>
-                    </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
-                        <div class="text-2xl font-bold text-yellow-400" id="invLowStock">0</div>
-                        <div class="text-sm text-gray-400">Low Stock</div>
-                    </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
-                        <div class="text-2xl font-bold text-red-400" id="invOutOfStock">0</div>
-                        <div class="text-sm text-gray-400">Out of Stock</div>
-                    </div>
-                </div>
-                
-                <!-- Inventory Table -->
-                <div class="overflow-x-auto">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th>Stock</th>
-                                <th>Price (₹)</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventoryTableBody">
-                            <tr>
-                                <td colspan="6" class="text-center text-gray-400 py-8">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading inventory...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- AI Activity Log -->
-            <div class="admin-card">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold"><i class="fas fa-list mr-2 text-blue-400"></i>AI Agent Activity Log</h3>
-                    <button onclick="loadAIActivityLog()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                        <i class="fas fa-sync-alt mr-1"></i>Refresh
-                    </button>
-                </div>
-                <div id="aiActivityLog" class="max-h-96 overflow-y-auto">
-                    <div class="text-center text-gray-400 py-8">
-                        <i class="fas fa-info-circle mr-2"></i>No activity yet
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Add/Edit Item Modal -->
-    <div id="itemModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold" id="itemModalTitle">Add New Item</h3>
-                <button onclick="closeItemModal()" class="text-gray-400 hover:text-white text-2xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <form id="itemForm">
-                <input type="hidden" id="itemId">
-                
-                <div class="mb-4">
-                    <label class="block text-gray-400 mb-2">Item Name</label>
-                    <input type="text" id="itemName" required
-                           class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-400 mb-2">Category</label>
-                    <select id="itemCategory" required
-                            class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
-                        <option value="">Select Category</option>
-                        <option value="medicines">Medicines</option>
-                        <option value="equipment">Equipment</option>
-                        <option value="supplies">Supplies</option>
-                        <option value="first-aid">First Aid</option>
-                        <option value="vitamins">Vitamins & Supplements</option>
-                    </select>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-gray-400 mb-2">Stock Quantity</label>
-                        <input type="number" id="itemStock" min="0" required
-                               class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-gray-400 mb-2">Price (₹)</label>
-                        <input type="number" id="itemPrice" min="0" step="0.01" required
-                               class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-400 mb-2">Description</label>
-                    <textarea id="itemDescription" rows="3"
-                              class="w-full px-4 py-3 bg-transparent border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none"></textarea>
-                </div>
-                
-                <div class="flex gap-4">
-                    <button type="button" onclick="closeItemModal()" class="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
-                        <i class="fas fa-save mr-2"></i>Save Item
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- User Detail Modal -->
-    <div id="userModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold" id="modalUserName">User Details</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <!-- Trends Summary -->
-            <div class="grid grid-cols-4 gap-4 mb-6" id="trendsSummary">
-                <!-- Filled by JS -->
-            </div>
-            
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="history">History</button>
-                <button class="tab-btn" data-tab="trends">Trends Chart</button>
-            </div>
-            
-            <div id="tab-history" class="tab-content active">
-                <div id="userHistory">
-                    <p class="text-gray-400 text-center py-8">Loading history...</p>
-                </div>
-            </div>
-            
-            <div id="tab-trends" class="tab-content">
-                <div class="chart-container" style="height: 250px;">
-                    <canvas id="userTrendChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============ TRENDS & PREDICTIONS SECTION ============ -->
-    <div id="section-trends" class="admin-section">
-        <div class="admin-card mb-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Disease Trends & Medicine Demand Prediction</h2>
-                <button onclick="loadTrendsData()" class="px-4 py-2 bg-cyan-600 rounded-lg hover:bg-cyan-700 text-sm font-medium">
-                    <i class="fas fa-sync-alt mr-2"></i>Refresh Analysis
-                </button>
-            </div>
-
-            <!-- Trend KPI Cards -->
-            <div class="admin-grid mb-6">
-                <div class="admin-card" style="background: linear-gradient(135deg,rgba(6,182,212,.12),rgba(6,182,212,.04));">
-                    <div class="stat-big text-cyan-400" id="trend-total-assessments">0</div>
-                    <div class="stat-label">Total Assessments</div>
-                </div>
-                <div class="admin-card" style="background: linear-gradient(135deg,rgba(239,68,68,.12),rgba(239,68,68,.04));">
-                    <div class="stat-big text-red-400" id="trend-high-risk">0</div>
-                    <div class="stat-label">High Risk Cases</div>
-                </div>
-                <div class="admin-card" style="background: linear-gradient(135deg,rgba(168,85,247,.12),rgba(168,85,247,.04));">
-                    <div class="stat-big text-purple-400" id="trend-dominant-disease">—</div>
-                    <div class="stat-label">Most Common Condition</div>
-                </div>
-                <div class="admin-card" style="background: linear-gradient(135deg,rgba(34,197,94,.12),rgba(34,197,94,.04));">
-                    <div class="stat-big text-green-400" id="trend-growth">+0%</div>
-                    <div class="stat-label">Monthly Growth</div>
-                </div>
-            </div>
-
-            <!-- Charts Row -->
-            <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
-                <div class="admin-card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-disease mr-2 text-red-400"></i>Disease Type Distribution</h3>
-                    <div class="chart-container" style="height:220px;">
-                        <canvas id="trendDiseaseChart"></canvas>
-                    </div>
-                </div>
-                <div class="admin-card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-calendar-alt mr-2 text-blue-400"></i>Monthly Diagnosis Trend (Last 6 Months)</h3>
-                    <div class="chart-container" style="height:220px;">
-                        <canvas id="trendMonthlyChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Risk & Medicine Prediction -->
-            <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
-                <div class="admin-card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>Risk Level Breakdown</h3>
-                    <div class="chart-container" style="height:220px;">
-                        <canvas id="trendRiskChart"></canvas>
-                    </div>
-                </div>
-                <div class="admin-card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-pills mr-2 text-green-400"></i>Predicted Medicine Demand (Next 30 Days)</h3>
-                    <div id="medicinePredictionList" class="space-y-3 mt-2">
-                        <div class="text-gray-400 text-sm">Loading prediction...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI Insights -->
-            <div class="admin-card" style="background: linear-gradient(135deg,rgba(139,92,246,.08),rgba(6,182,212,.06));border:1px solid rgba(139,92,246,.3);">
-                <h3 class="text-lg font-bold mb-4"><i class="fas fa-robot mr-2 text-purple-400"></i>AI-Generated Insights & Recommendations</h3>
-                <div id="aiInsightsList" class="space-y-3">
-                    <div class="text-gray-400 text-sm">Analyzing data...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- User Activity Deep Dive -->
-        <div class="admin-card">
-            <h3 class="text-xl font-bold mb-4"><i class="fas fa-activity mr-2 text-blue-400"></i>User Activity Analysis</h3>
-            <div class="admin-grid mb-4" style="grid-template-columns:1fr 1fr;">
-                <div class="chart-container" style="height:200px;">
-                    <canvas id="trendActivityChart"></canvas>
-                </div>
-                <div id="activityBreakdownList" class="space-y-2 p-4">
-                    <div class="text-gray-400 text-sm">Loading activity data...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    </div><!-- end adminDashboard -->
-
-    <script>
+﻿
         const API_URL = 'http://localhost:5000/api';
         let adminToken = null;
         let riskChart = null;
@@ -970,26 +21,26 @@
 
         // Verify Supabase connection and get authenticated client
         function getSupabaseClient() {
-            console.log('🔍 Verifying Supabase connection...');
+            console.log('ðŸ” Verifying Supabase connection...');
             
             if (!window.MedAISupabase) {
-                console.error('❌ MedAISupabase not found on window object');
+                console.error('âŒ MedAISupabase not found on window object');
                 return null;
             }
             
             const supabase = window.MedAISupabase.getSupabase();
             if (!supabase) {
-                console.error('❌ Supabase client not initialized');
+                console.error('âŒ Supabase client not initialized');
                 return null;
             }
             
-            console.log('✅ Supabase client verified');
+            console.log('âœ… Supabase client verified');
             return supabase;
         }
 
         // Check authentication using localStorage admin token (not Supabase Auth)
         async function verifyAdminAuth() {
-            console.log('🔑 Verifying admin authentication via localStorage token...');
+            console.log('ðŸ”‘ Verifying admin authentication via localStorage token...');
             
             try {
                 const token = localStorage.getItem('medai_admin_token');
@@ -997,16 +48,16 @@
                 const adminEmail = localStorage.getItem('medai_admin_email');
                 
                 if (!token || !token.startsWith('admin-authenticated-') || adminId !== 'single-admin-user') {
-                    console.warn('⚠️ Invalid or missing admin token');
+                    console.warn('âš ï¸ Invalid or missing admin token');
                     return { success: false, error: 'Authentication failed: Invalid admin session' };
                 }
                 
                 if (adminEmail !== 'admin@medai.com') {
-                    console.warn('⚠️ Unauthorized admin email');
+                    console.warn('âš ï¸ Unauthorized admin email');
                     return { success: false, error: 'Access denied: Unauthorized admin email' };
                 }
                 
-                console.log('✅ Admin token verified for:', adminEmail);
+                console.log('âœ… Admin token verified for:', adminEmail);
                 return { 
                     success: true, 
                     user: { email: adminEmail, id: 'single-admin-user' }, 
@@ -1015,7 +66,7 @@
                 };
                 
             } catch (error) {
-                console.error('❌ Verification failed:', error);
+                console.error('âŒ Verification failed:', error);
                 return { success: false, error: error.message };
             }
         }
@@ -1028,7 +79,7 @@
                 
                 // Skip auth check - admin uses localStorage token, not Supabase auth
                 // Just log a console message instead
-                console.log('📝 Activity:', activityType, activityData);
+                console.log('ðŸ“ Activity:', activityType, activityData);
                 
             } catch (error) {
                 // Silently fail - activity logging shouldn't break the app
@@ -1038,7 +89,7 @@
 
         // Load User Activity Data from Table
         async function loadUserActivityFromTable() {
-            console.log('📊 Loading user activity data...');
+            console.log('ðŸ“Š Loading user activity data...');
             
             try {
                 const supabase = getSupabaseClient();
@@ -1055,12 +106,12 @@
                     .order('created_at', { ascending: false });
                 
                 if (error) {
-                    console.warn('⚠️ User activity table query failed:', error.message);
+                    console.warn('âš ï¸ User activity table query failed:', error.message);
                     return null;
                 }
                 
                 if (!activities || activities.length === 0) {
-                    console.log('📊 No activity data found in user_activity table');
+                    console.log('ðŸ“Š No activity data found in user_activity table');
                     return null;
                 }
                 
@@ -1083,13 +134,13 @@
                     }
                 });
                 
-                console.log('✅ User activity data loaded:', Object.keys(activityByDate).length, 'days');
-                console.log('📊 Activity data:', activityByDate);
+                console.log('âœ… User activity data loaded:', Object.keys(activityByDate).length, 'days');
+                console.log('ðŸ“Š Activity data:', activityByDate);
                 
                 return activityByDate;
                 
             } catch (error) {
-                console.warn('⚠️ Could not load user activity:', error.message);
+                console.warn('âš ï¸ Could not load user activity:', error.message);
                 return null;
             }
         }
@@ -1105,7 +156,7 @@
         
         // Check existing session and initialize dashboard  
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🔧 Initializing admin dashboard...');
+            console.log('ðŸ”§ Initializing admin dashboard...');
             
             try {
                 // Simple admin token check - only one admin allowed
@@ -1114,23 +165,23 @@
                 const adminEmail = localStorage.getItem('medai_admin_email');
                 
                 if (!token || !token.startsWith('admin-authenticated-') || adminId !== 'single-admin-user') {
-                    console.warn('❌ Invalid or missing admin session');
+                    console.warn('âŒ Invalid or missing admin session');
                     window.location.href = 'login-admin.html';
                     return;
                 }
                 
                 if (adminEmail !== 'admin@medai.com') {
-                    console.warn('❌ Unauthorized admin email');
+                    console.warn('âŒ Unauthorized admin email');
                     localStorage.clear();
                     window.location.href = 'login-admin.html';
                     return;
                 }
                 
-                console.log('✅ Single admin authentication verified');
+                console.log('âœ… Single admin authentication verified');
                 showDashboard(adminEmail);
                 
             } catch (error) {
-                console.error('❌ Dashboard initialization failed:', error);
+                console.error('âŒ Dashboard initialization failed:', error);
                 localStorage.clear();
                 window.location.href = 'login-admin.html';
             }
@@ -1155,7 +206,7 @@
         }
         
         async function showDashboard(email) {
-            console.log('📊 Showing admin dashboard for:', email);
+            console.log('ðŸ“Š Showing admin dashboard for:', email);
             
             try {
                 // Hide loading overlay and show dashboard
@@ -1164,24 +215,24 @@
                 document.getElementById('adminEmailDisplay').textContent = email;
                 
                 // Load dashboard data with mock data as fallback
-                console.log('🔄 Loading dashboard data...');
+                console.log('ðŸ”„ Loading dashboard data...');
                 
                 // Try to load real data, but use mock data if Supabase fails
                 try {
                     await Promise.all([
-                        loadStatsWithFallback().catch(error => console.error('❌ Failed to load stats:', error)),
-                        loadUsersWithFallback().catch(error => console.error('❌ Failed to load users:', error)),
-                        loadOrdersWithFallback().catch(error => console.error('❌ Failed to load orders:', error))
+                        loadStatsWithFallback().catch(error => console.error('âŒ Failed to load stats:', error)),
+                        loadUsersWithFallback().catch(error => console.error('âŒ Failed to load users:', error)),
+                        loadOrdersWithFallback().catch(error => console.error('âŒ Failed to load orders:', error))
                     ]);
                 } catch (error) {
-                    console.warn('⚠️ Using fallback data due to database errors');
+                    console.warn('âš ï¸ Using fallback data due to database errors');
                     showMockDashboardData();
                 }
                 
-                console.log('✅ Admin dashboard loaded successfully');
+                console.log('âœ… Admin dashboard loaded successfully');
                 
             } catch (error) {
-                console.error('❌ Error showing dashboard:', error);
+                console.error('âŒ Error showing dashboard:', error);
                 
                 // Still show dashboard but with error message
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -1195,7 +246,7 @@
         
         // Show mock data when Supabase is not working
         function showMockDashboardData() {
-            console.log('📊 Loading mock dashboard data...');
+            console.log('ðŸ“Š Loading mock dashboard data...');
             
             // Mock stats
             document.getElementById('totalUsers').textContent = '25';
@@ -1213,7 +264,7 @@
             document.getElementById('ordersTotal').textContent = '45';
             document.getElementById('ordersPending').textContent = '12';
             document.getElementById('ordersDelivered').textContent = '33';
-            document.getElementById('ordersRevenue').textContent = '₹8,450.00';
+            document.getElementById('ordersRevenue').textContent = 'â‚¹8,450.00';
             
             // Show mock users table
             showMockUserData();
@@ -1258,7 +309,7 @@
                             ${order.items.map(item => `${item.name} (${item.quantity})`).join(', ')}
                         </div>
                     </td>
-                    <td class="py-3 px-4 font-semibold">₹${order.total}</td>
+                    <td class="py-3 px-4 font-semibold">â‚¹${order.total}</td>
                     <td class="py-3 px-4">
                         <span class="px-3 py-1 rounded-full text-xs font-medium ${
                             order.order_status === 'delivered' ? 'bg-green-600 text-green-100' :
@@ -1283,7 +334,7 @@
             try {
                 await loadStats();
             } catch (error) {
-                console.warn('⚠️ Stats loading failed, using mock data');
+                console.warn('âš ï¸ Stats loading failed, using mock data');
                 // Mock stats already set in showMockDashboardData
             }
         }
@@ -1292,7 +343,7 @@
             try {
                 await loadUsers();
             } catch (error) {
-                console.warn('⚠️ Users loading failed, using mock data');
+                console.warn('âš ï¸ Users loading failed, using mock data');
                 showMockUserData();
             }
         }
@@ -1301,14 +352,14 @@
             try {
                 await loadOrders();
             } catch (error) {
-                console.warn('⚠️ Orders loading failed, using mock data');
+                console.warn('âš ï¸ Orders loading failed, using mock data');
                 showMockOrderData();
             }
         }
         
         // Logout - Clear all admin session data
         document.getElementById('logoutBtn').addEventListener('click', async function() {
-            console.log('🚪 Admin logout initiated...');
+            console.log('ðŸšª Admin logout initiated...');
             
             // Clear all admin session data
             localStorage.removeItem('medai_admin_token');
@@ -1318,7 +369,7 @@
             // Clear legacy data
             adminToken = null;
             
-            console.log('✅ Admin session cleared');
+            console.log('âœ… Admin session cleared');
             
             // Redirect to login
             window.location.href = 'login-admin.html';
@@ -1326,7 +377,7 @@
         
         // Load admin stats from Supabase
         async function loadStats() {
-            console.log('📊 Loading admin stats...');
+            console.log('ðŸ“Š Loading admin stats...');
             try {
                 const supabase = window.MedAISupabase.getSupabase();
                 if (!supabase) throw new Error('Supabase not initialized');
@@ -1341,7 +392,7 @@
                 }
                 
                 const totalUsers = profilesData?.length || 0;
-                console.log('👥 Total registered users:', totalUsers);
+                console.log('ðŸ‘¥ Total registered users:', totalUsers);
                 
                 // Get total diagnoses
                 const { data: diagnosesData, error: diagError } = await supabase
@@ -1353,14 +404,14 @@
                 }
                 
                 const totalDiagnoses = diagnosesData?.length || 0;
-                console.log('🏥 Total diagnoses:', totalDiagnoses);
+                console.log('ðŸ¥ Total diagnoses:', totalDiagnoses);
                 
                 // Get today's diagnoses
                 const today = new Date().toISOString().split('T')[0];
                 const todayDiagnoses = diagnosesData?.filter(d => 
                     d.created_at?.startsWith(today)
                 ).length || 0;
-                console.log('📅 Today diagnoses:', todayDiagnoses);
+                console.log('ðŸ“… Today diagnoses:', todayDiagnoses);
                 
                 // Calculate risk distribution
                 const riskCounts = { low: 0, medium: 0, high: 0, critical: 0 };
@@ -1369,7 +420,7 @@
                         riskCounts[d.risk_level]++;
                     }
                 });
-                console.log('⚠️ Risk distribution:', riskCounts);
+                console.log('âš ï¸ Risk distribution:', riskCounts);
                 
                 // Calculate type distribution
                 const typeCounts = { diabetes: 0, lung: 0, bp: 0, symptoms: 0 };
@@ -1378,7 +429,7 @@
                         typeCounts[d.diagnosis_type] = (typeCounts[d.diagnosis_type] || 0) + 1;
                     }
                 });
-                console.log('📋 Diagnosis types:', typeCounts);
+                console.log('ðŸ“‹ Diagnosis types:', typeCounts);
                 
                 const highRiskCount = (riskCounts.high || 0) + (riskCounts.critical || 0);
                 
@@ -1388,7 +439,7 @@
                 document.getElementById('todayDiagnoses').textContent = todayDiagnoses;
                 document.getElementById('highRiskCount').textContent = highRiskCount;
                 
-                console.log('✅ Stats updated in UI');
+                console.log('âœ… Stats updated in UI');
                 
                 // Render charts with real data
                 const chartData = {
@@ -1402,7 +453,7 @@
                 renderCharts(chartData);
                 
             } catch (error) {
-                console.error('❌ Failed to load stats:', error);
+                console.error('âŒ Failed to load stats:', error);
                 // Set default values if error
                 document.getElementById('totalUsers').textContent = '0';
                 document.getElementById('totalDiagnoses').textContent = '0';
@@ -1412,7 +463,7 @@
         }
         
         function renderCharts(data) {
-            console.log('📊 Rendering charts with data:', data);
+            console.log('ðŸ“Š Rendering charts with data:', data);
             
             try {
                 // Risk distribution chart
@@ -1508,19 +559,19 @@
                     }
                 });
                 
-                console.log('✅ Charts rendered successfully');
+                console.log('âœ… Charts rendered successfully');
             } catch (error) {
-                console.error('❌ Error rendering charts:', error);
+                console.error('âŒ Error rendering charts:', error);
             }
         }
         
         // Load users from Supabase with comprehensive error handling
         async function loadUsers() {
-            console.log('👥 Loading user list and analytics...');
+            console.log('ðŸ‘¥ Loading user list and analytics...');
             
             const tbody = document.getElementById('usersTableBody');
             if (!tbody) {
-                console.error('❌ Users table body element not found');
+                console.error('âŒ Users table body element not found');
                 return;
             }
             
@@ -1538,13 +589,13 @@
                 
                 // If Supabase is not available, show mock data
                 if (!supabase) {
-                    console.warn('⚠️ Supabase not available, showing mock data');
+                    console.warn('âš ï¸ Supabase not available, showing mock data');
                     showMockUserData();
                     return;
                 }
                 
                 // No Supabase auth check needed - admin verified via localStorage token before dashboard loads
-                console.log('👥 Fetching users from profiles table (anon key)...');
+                console.log('ðŸ‘¥ Fetching users from profiles table (anon key)...');
                 
                 // Get all user profiles
                 const { data: profilesData, error: profilesError } = await supabase
@@ -1553,13 +604,13 @@
                     .order('created_at', { ascending: false });
                 
                 if (profilesError) {
-                    console.error('❌ Profiles query error:', profilesError);
+                    console.error('âŒ Profiles query error:', profilesError);
                     throw new Error(`Could not load user profiles: ${profilesError.message}`);
                 }
                 
-                console.log(`✅ Profiles fetched: ${profilesData?.length || 0} users found`);
+                console.log(`âœ… Profiles fetched: ${profilesData?.length || 0} users found`);
                 
-                console.log('📊 Fetching diagnosis data...');
+                console.log('ðŸ“Š Fetching diagnosis data...');
                 
                 // Get all diagnosis results for analysis
                 const { data: diagnosesData, error: diagError } = await supabase
@@ -1568,10 +619,10 @@
                     .order('created_at', { ascending: false });
                 
                 if (diagError) {
-                    console.warn('⚠️ Could not load diagnosis data:', diagError.message);
+                    console.warn('âš ï¸ Could not load diagnosis data:', diagError.message);
                 }
                 
-                console.log(`✅ Diagnoses fetched: ${diagnosesData?.length || 0} records found`);
+                console.log(`âœ… Diagnoses fetched: ${diagnosesData?.length || 0} records found`);
                 
                 // Calculate activity statistics
                 const today = new Date().toISOString().split('T')[0];
@@ -1627,7 +678,7 @@
                     }
                 });
                 
-                console.log('🔄 Merging user and diagnosis data...');
+                console.log('ðŸ”„ Merging user and diagnosis data...');
                 
                 // Build complete user statistics
                 const users = (profilesData || []).map(profile => ({
@@ -1645,7 +696,7 @@
                 // Store users data globally
                 allUsersData = users;
                 
-                console.log(`✅ User data processed: ${users.length} users with merged diagnosis data`);
+                console.log(`âœ… User data processed: ${users.length} users with merged diagnosis data`);
                 
                 // Update analytics cards
                 const usersWithAssessments = users.filter(u => u.total_assessments > 0).length;
@@ -1664,18 +715,18 @@
                     if (element) {
                         element.textContent = value;
                     } else {
-                        console.warn(`⚠️ Element not found: ${id}`);
+                        console.warn(`âš ï¸ Element not found: ${id}`);
                     }
                 });
                 
-                console.log('📊 Analytics updated:', elements);
+                console.log('ðŸ“Š Analytics updated:', elements);
                 
                 // Load user activity chart data
                 let activityData = await loadUserActivityFromTable();
                 
                 // Fallback to diagnosis-based activity if user_activity table is empty
                 if (!activityData || Object.keys(activityData).length === 0) {
-                    console.log('📊 Using diagnosis-based activity tracking as fallback');
+                    console.log('ðŸ“Š Using diagnosis-based activity tracking as fallback');
                     activityData = last7Days;
                 }
                 
@@ -1683,14 +734,14 @@
                 if (typeof renderUserActivityChart === 'function') {
                     renderUserActivityChart(activityData);
                 } else {
-                    console.warn('⚠️ renderUserActivityChart function not found');
+                    console.warn('âš ï¸ renderUserActivityChart function not found');
                 }
                 
                 // Render users table
                 if (typeof renderUsersTable === 'function') {
                     renderUsersTable(users);
                 } else {
-                    console.warn('⚠️ renderUsersTable function not found');
+                    console.warn('âš ï¸ renderUsersTable function not found');
                 }
                 
                 // Log admin activity
@@ -1702,7 +753,7 @@
                 });
                 
             } catch (error) {
-                console.error('❌ Failed to load users:', error);
+                console.error('âŒ Failed to load users:', error);
                 
                 let errorMessage = 'Failed to load users';
                 let technicalDetails = error.message;
@@ -1790,7 +841,7 @@
         
         // Show mock order data when Supabase is not available
         function showMockOrderData() {
-            console.log('📦 Showing mock order data...');
+            console.log('ðŸ“¦ Showing mock order data...');
             const mockOrders = [
                 {
                     id: 'ORD-001',
@@ -1857,7 +908,7 @@
                     .order('created_at', { ascending: false });
                 
                 if (error) {
-                    console.warn('⚠️ User activity table not accessible:', error.message);
+                    console.warn('âš ï¸ User activity table not accessible:', error.message);
                     return null;
                 }
                 
@@ -1868,15 +919,15 @@
                     activityByDate[date] = (activityByDate[date] || 0) + 1;
                 });
                 
-                console.log('✅ Loaded user activity from user_activity table:', Object.keys(activityByDate).length, 'days with activity');
+                console.log('âœ… Loaded user activity from user_activity table:', Object.keys(activityByDate).length, 'days with activity');
                 return activityByDate;
             } catch (error) {
-                console.warn('⚠️ Could not load user activity:', error.message);
+                console.warn('âš ï¸ Could not load user activity:', error.message);
                 return null;
             }
         }
         
-        // NOTE: logUserActivity is defined earlier (line ~931) — using localStorage token only
+        // NOTE: logUserActivity is defined earlier (line ~931) â€” using localStorage token only
         
         // Get max risk level for a user
         function getMaxRiskLevel(riskSummary) {
@@ -2265,20 +1316,20 @@
         // ===== ORDERS MANAGEMENT =====
         
         async function loadOrders() {
-            console.log('📦 Loading orders...');
+            console.log('ðŸ“¦ Loading orders...');
             const tbody = document.getElementById('ordersTableBody');
             tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading orders...</td></tr>';
             
             try {
                 const supabase = window.MedAISupabase?.getSupabase();
                 if (!supabase) {
-                    console.warn('⚠️ Supabase not available, showing mock orders');
+                    console.warn('âš ï¸ Supabase not available, showing mock orders');
                     showMockOrderData();
                     return;
                 }
                 
                 // No Supabase auth check needed - admin verified via localStorage token before dashboard loads
-                console.log('✅ Loading orders (anon key)...');
+                console.log('âœ… Loading orders (anon key)...');
                 
                 // Get all orders
                 const { data: orders, error } = await supabase
@@ -2287,13 +1338,13 @@
                     .order('created_at', { ascending: false });
                 
                 if (error) {
-                    console.warn('⚠️ Orders query error (using mock data):', error.message);
+                    console.warn('âš ï¸ Orders query error (using mock data):', error.message);
                     showMockOrderData();
                     return;
                 }
                 
                 allOrdersData = orders || [];
-                console.log(`✅ Loaded ${allOrdersData.length} orders`);
+                console.log(`âœ… Loaded ${allOrdersData.length} orders`);
                 
                 if (allOrdersData.length === 0) {
                     showMockOrderData();
@@ -2305,7 +1356,7 @@
                 await logUserActivity('admin_view_orders', { order_count: allOrdersData.length });
                 
             } catch (error) {
-                console.warn('⚠️ Failed to load orders, using mock data:', error.message);
+                console.warn('âš ï¸ Failed to load orders, using mock data:', error.message);
                 showMockOrderData();
             }
         }
@@ -2314,7 +1365,7 @@
         let trendDiseaseChart = null, trendMonthlyChart = null, trendRiskChart = null, trendActivityChart = null;
         
         async function loadTrendsData() {
-            console.log('📈 Loading trends and prediction data...');
+            console.log('ðŸ“ˆ Loading trends and prediction data...');
             try {
                 const supabase = window.MedAISupabase?.getSupabase();
                 let diagnoses = [], orders = [], activities = [];
@@ -2352,7 +1403,7 @@
                 analyzeTrendsAndRender(diagnoses, orders, activities);
                 
             } catch (err) {
-                console.warn('⚠️ Trends: using mock data:', err.message);
+                console.warn('âš ï¸ Trends: using mock data:', err.message);
                 analyzeTrendsAndRender(generateMockDiagnoses(), [], []);
             }
         }
@@ -2386,7 +1437,7 @@
             });
             const dominant = Object.entries(typeCounts).sort((a,b) => b[1]-a[1])[0];
             const diseaseLabels = { diabetes: 'Diabetes', lung: 'Lung Disease', bp: 'Blood Pressure', symptoms: 'Symptom Check' };
-            document.getElementById('trend-dominant-disease').textContent = dominant ? (diseaseLabels[dominant[0]] || dominant[0]) : '—';
+            document.getElementById('trend-dominant-disease').textContent = dominant ? (diseaseLabels[dominant[0]] || dominant[0]) : 'â€”';
             
             // Monthly growth (compare last 30 days vs prev 30)
             const now = new Date();
@@ -2545,7 +1596,7 @@
                 `;
             }
             
-            console.log('✅ Trends analysis complete');
+            console.log('âœ… Trends analysis complete');
         }
         
         function predictMedicineDemand(typeCounts, riskCounts, orders) {
@@ -2576,27 +1627,27 @@
             const diseaseLabels = { diabetes: 'Diabetes', lung: 'Lung Disease', bp: 'Blood Pressure', symptoms: 'General Symptoms' };
             
             if (highRisk > total * 0.3) {
-                insights.push({ icon: '🚨', title: 'High Risk Alert', detail: `${Math.round(highRisk/total*100)}% of patients are high or critical risk. Recommend immediate inventory stocking of emergency medicines and scheduling follow-ups.` });
+                insights.push({ icon: 'ðŸš¨', title: 'High Risk Alert', detail: `${Math.round(highRisk/total*100)}% of patients are high or critical risk. Recommend immediate inventory stocking of emergency medicines and scheduling follow-ups.` });
             }
             if (dominant) {
-                insights.push({ icon: '📊', title: `${diseaseLabels[dominant[0]] || dominant[0]} is the Leading Condition`, detail: `${dominant[1]} cases (${Math.round(dominant[1]/total*100)}%). Consider targeted awareness campaigns and stocking disease-specific medications at 20% above current levels.` });
+                insights.push({ icon: 'ðŸ“Š', title: `${diseaseLabels[dominant[0]] || dominant[0]} is the Leading Condition`, detail: `${dominant[1]} cases (${Math.round(dominant[1]/total*100)}%). Consider targeted awareness campaigns and stocking disease-specific medications at 20% above current levels.` });
             }
             if (growth > 15) {
-                insights.push({ icon: '📈', title: 'Rapid Patient Growth Detected', detail: `${growth}% increase in diagnoses this month. Proactively increase all medicine inventory by ${Math.min(growth, 40)}% to meet projected demand.` });
+                insights.push({ icon: 'ðŸ“ˆ', title: 'Rapid Patient Growth Detected', detail: `${growth}% increase in diagnoses this month. Proactively increase all medicine inventory by ${Math.min(growth, 40)}% to meet projected demand.` });
             } else if (growth < -10) {
-                insights.push({ icon: '📉', title: 'Assessment Activity Declining', detail: `${Math.abs(growth)}% fewer diagnoses. Consider patient outreach programs and reminder notifications to encourage health check-ins.` });
+                insights.push({ icon: 'ðŸ“‰', title: 'Assessment Activity Declining', detail: `${Math.abs(growth)}% fewer diagnoses. Consider patient outreach programs and reminder notifications to encourage health check-ins.` });
             }
             if ((riskCounts.medium||0) > total * 0.4) {
-                insights.push({ icon: '⚠️', title: 'Large Medium-Risk Population', detail: `${riskCounts.medium} medium-risk patients require preventive medication. Stock lifestyle management drugs (Metformin, statins, antihypertensives) proactively.` });
+                insights.push({ icon: 'âš ï¸', title: 'Large Medium-Risk Population', detail: `${riskCounts.medium} medium-risk patients require preventive medication. Stock lifestyle management drugs (Metformin, statins, antihypertensives) proactively.` });
             }
             if ((typeCounts['diabetes']||0) > 0 && (typeCounts['bp']||0) > 0) {
-                insights.push({ icon: '💊', title: 'Comorbidity Pattern Detected', detail: `Both diabetes and hypertension are prevalent. These conditions often co-occur. Stock combination therapy medications and ensure BP monitors are available.` });
+                insights.push({ icon: 'ðŸ’Š', title: 'Comorbidity Pattern Detected', detail: `Both diabetes and hypertension are prevalent. These conditions often co-occur. Stock combination therapy medications and ensure BP monitors are available.` });
             }
             if (orders.length > 0) {
                 const revenue = orders.reduce((s,o) => s + (parseFloat(o.total)||0), 0);
-                insights.push({ icon: '💰', title: `₹${revenue.toFixed(0)} Total Order Revenue`, detail: `${orders.length} orders processed. Top selling items likely align with diagnosis trends. Review inventory to ensure supply matches patient need.` });
+                insights.push({ icon: 'ðŸ’°', title: `â‚¹${revenue.toFixed(0)} Total Order Revenue`, detail: `${orders.length} orders processed. Top selling items likely align with diagnosis trends. Review inventory to ensure supply matches patient need.` });
             }
-            insights.push({ icon: '🏥', title: 'Preventive Care Opportunity', detail: 'Regular health monitoring reduces emergency admissions by up to 35%. Recommend sending monthly health reminder notifications to all registered users.' });
+            insights.push({ icon: 'ðŸ¥', title: 'Preventive Care Opportunity', detail: 'Regular health monitoring reduces emergency admissions by up to 35%. Recommend sending monthly health reminder notifications to all registered users.' });
             
             return insights;
         }
@@ -2611,7 +1662,7 @@
             document.getElementById('ordersDelivered').textContent = delivered;
             
             const revenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-            document.getElementById('ordersRevenue').textContent = `₹${revenue.toFixed(2)}`;
+            document.getElementById('ordersRevenue').textContent = `â‚¹${revenue.toFixed(2)}`;
         }
         
         function renderOrdersTable(orders) {
@@ -2653,7 +1704,7 @@
                             <div class="text-sm">${itemNames}${moreText}</div>
                             <div class="text-xs text-gray-500">${itemCount} item(s)</div>
                         </td>
-                        <td class="text-green-400 font-bold">₹${parseFloat(order.total || 0).toFixed(2)}</td>
+                        <td class="text-green-400 font-bold">â‚¹${parseFloat(order.total || 0).toFixed(2)}</td>
                         <td>
                             <div class="${paymentColors[order.payment_status] || 'text-gray-400'}">${order.payment_method || 'COD'}</div>
                             <div class="text-xs">${order.payment_status || 'pending'}</div>
@@ -2705,12 +1756,12 @@
                 
                 if (error) throw error;
                 
-                alert(`✅ Order status updated to ${newStatus}`);
+                alert(`âœ… Order status updated to ${newStatus}`);
                 loadOrders(); // Reload to show updated status
                 
             } catch (error) {
                 console.error('Error updating order:', error);
-                alert(`❌ Failed to update order: ${error.message}`);
+                alert(`âŒ Failed to update order: ${error.message}`);
             }
         }
         
@@ -2732,12 +1783,12 @@
                 if (error) throw error;
                 
                 inventoryData = data || [];
-                console.log('✅ Loaded inventory:', inventoryData.length, 'items');
+                console.log('âœ… Loaded inventory:', inventoryData.length, 'items');
                 renderInventory(inventoryData);
                 updateInventoryStats(inventoryData);
                 
             } catch (error) {
-                console.error('❌ Failed to load inventory:', error);
+                console.error('âŒ Failed to load inventory:', error);
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-400 py-8">Failed to load inventory: ${error.message}</td></tr>`;
             }
         }
@@ -2773,7 +1824,7 @@
                         </td>
                         <td class="text-gray-300 capitalize">${item.category || 'N/A'}</td>
                         <td class="text-white font-bold">${stock}</td>
-                        <td class="text-green-400">₹${parseFloat(item.price || 0).toFixed(2)}</td>
+                        <td class="text-green-400">â‚¹${parseFloat(item.price || 0).toFixed(2)}</td>
                         <td><span class="stock-badge ${statusClass}">${statusText}</span></td>
                         <td>
                             <button onclick="editItem('${item.id}')" class="action-btn btn-edit" title="Edit">
@@ -2851,7 +1902,7 @@
                         .eq('id', itemId);
                     
                     if (error) throw error;
-                    alert('✅ Item updated successfully!');
+                    alert('âœ… Item updated successfully!');
                 } else {
                     // Insert new
                     const { error } = await supabase
@@ -2859,7 +1910,7 @@
                         .insert([itemData]);
                     
                     if (error) throw error;
-                    alert('✅ Item added successfully!');
+                    alert('âœ… Item added successfully!');
                 }
                 
                 closeItemModal();
@@ -2867,7 +1918,7 @@
                 
             } catch (error) {
                 console.error('Save error:', error);
-                alert('❌ Failed to save item: ' + error.message);
+                alert('âŒ Failed to save item: ' + error.message);
             }
         });
         
@@ -2887,12 +1938,12 @@
                 
                 if (error) throw error;
                 
-                alert('✅ Item deleted successfully!');
+                alert('âœ… Item deleted successfully!');
                 loadInventory();
                 
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('❌ Failed to delete item: ' + error.message);
+                alert('âŒ Failed to delete item: ' + error.message);
             }
         }
         
@@ -2974,7 +2025,7 @@
         
         // Run AI Agent analysis and actions
         async function runAIAgent() {
-            console.log('🤖 AI Agent: Running inventory analysis...');
+            console.log('ðŸ¤– AI Agent: Running inventory analysis...');
             
             try {
                 const supabase = window.MedAISupabase.getSupabase();
@@ -2997,7 +2048,7 @@
                     !item.quantity || item.quantity === 0
                 );
                 
-                console.log(`🤖 AI Agent: Found ${lowStockItems.length} low stock, ${outOfStockItems.length} out of stock`);
+                console.log(`ðŸ¤– AI Agent: Found ${lowStockItems.length} low stock, ${outOfStockItems.length} out of stock`);
                 
                 // Auto-reorder low stock items if AI is enabled
                 if (aiAgentEnabled) {
@@ -3032,7 +2083,7 @@
                 }
                 
             } catch (error) {
-                console.error('❌ AI Agent error:', error);
+                console.error('âŒ AI Agent error:', error);
                 addAILog(`Error during analysis: ${error.message}`, 'warning');
             }
         }
@@ -3052,7 +2103,7 @@
                     .single();
                 
                 if (existing) {
-                    console.log(`🤖 AI Agent: Reorder already exists for ${item.name}`);
+                    console.log(`ðŸ¤– AI Agent: Reorder already exists for ${item.name}`);
                     return;
                 }
                 
@@ -3076,14 +2127,14 @@
                 
                 if (error) throw error;
                 
-                console.log(`✅ AI Agent: Created auto-reorder for ${item.name} (${reorderQty} units)`);
+                console.log(`âœ… AI Agent: Created auto-reorder for ${item.name} (${reorderQty} units)`);
                 addAILog(
                     `Auto-ordered ${reorderQty} units of "${item.name}" - Current stock: ${item.quantity || 0}`,
                     'success'
                 );
                 
             } catch (error) {
-                console.error('❌ AI Agent reorder error:', error);
+                console.error('âŒ AI Agent reorder error:', error);
             }
         }
         
@@ -3129,7 +2180,7 @@
             insights.push(`
                 <div class="mb-2">
                     <i class="fas fa-chart-line text-blue-400 mr-2"></i>
-                    <strong>Total Inventory Value:</strong> ₹${totalValue.toFixed(2)}
+                    <strong>Total Inventory Value:</strong> â‚¹${totalValue.toFixed(2)}
                 </div>
             `);
             
@@ -3229,7 +2280,7 @@
                                             hour: '2-digit', 
                                             minute: '2-digit' 
                                         })}
-                                        ${order.expected_delivery ? ` • Expected: ${new Date(order.expected_delivery).toLocaleDateString()}` : ''}
+                                        ${order.expected_delivery ? ` â€¢ Expected: ${new Date(order.expected_delivery).toLocaleDateString()}` : ''}
                                     </div>
                                 </div>
                                 <span class="text-xs px-2 py-1 rounded" style="background: rgba(255,255,255,0.1);">
@@ -3252,20 +2303,8 @@
         
         // Add entry to AI log (for real-time updates)
         function addAILog(message, type = 'info') {
-            console.log(`🤖 AI Agent: ${message}`);
+            console.log(`ðŸ¤– AI Agent: ${message}`);
             // Reload the activity log to show latest
             loadAIActivityLog();
         }
-    </script>
     
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-        }
-    }
-    </script>
-    <script type="module" src="ballpit.js"></script>
-</body>
-</html>
