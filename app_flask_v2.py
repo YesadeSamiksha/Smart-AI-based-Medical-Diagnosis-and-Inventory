@@ -1,0 +1,669 @@
+"""
+MedAI Flask Backend v2.0 - AI-powered Medical Diagnosis API
+Features:
+- Gemini AI-powered Symptom Analysis
+- Admin Authentication & Dashboard
+- User History & Trends Tracking
+- Supabase Integration for data persistence
+
+Run with: python app_flask_v2.py
+"""
+
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
+from functools import wraps
+import os
+import json
+import hashlib
+import secrets
+from datetime import datetime, timedelta
+from collections import Counter
+
+app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'medai-secret-key-change-in-production')
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+# ==================================================
+# Configuration
+# ==================================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load environment variables from .env file
+def load_env():
+    env_path = os.path.join(BASE_DIR, '.env')
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+    # Also try .env.example if .env doesn't exist
+    elif os.path.exists(os.path.join(BASE_DIR, '.env.example')):
+        print("⚠ Using .env.example - Please create .env with your actual keys")
+
+load_env()
+
+# Configuration from environment
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://ydhfwvlhwxhiivheepqo.supabase.co')
+SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY', '')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@medai.com')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'MedAI@Admin2024')
+
+# Initialize AI and Database clients
+GEMINI_AVAILABLE = False
+gemini_model = None
+SUPABASE_AVAILABLE = False
+supabase = None
+
+try:
+    import google.generativeai as genai
+    if GEMINI_API_KEY and GEMINI_API_KEY != 'your_gemini_api_key_here':
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel('gemini-pro')
+        GEMINI_AVAILABLE = True
+        print("✅ Gemini AI configured")
+    else:
+        print("⚠ Gemini API key not set")
+except ImportError:
+    print("⚠ Install google-generativeai: pip install google-generativeai")
+except Exception as e:
+    print(f"⚠ Gemini error: {e}")
+
+try:
+    from supabase import create_client
+    if SUPABASE_KEY and SUPABASE_KEY != 'your_supabase_anon_key_here':
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        SUPABASE_AVAILABLE = True
+        print("✅ Supabase connected")
+except ImportError:
+    print("⚠ Install supabase: pip install supabase")
+except Exception as e:
+    print(f"⚠ Supabase error: {e}")
+
+# In-memory storage (fallback when Supabase unavailable)
+memory_db = {
+    'users': {},
+    'diagnosis_history': [],
+    'admin_sessions': {}
+}
+
+# ==================================================
+# Helper Functions
+# ==================================================
+def safe_float(value, default=0.0):
+    if value == '' or value is None: return default
+    try: return float(value)
+    except: return default
+
+def safe_int(value, default=0):
+    if value == '' or value is None: return default
+    try: return int(float(value))
+    except: return default
+
+def generate_token():
+    return secrets.token_hex(32)
+
+# ==================================================
+# Admin Authentication
+# ==================================================
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token or token not in memory_db['admin_sessions']:
+            return jsonify({'error': 'Admin authentication required'}), 401
+        session_data = memory_db['admin_sessions'][token]
+        if datetime.now() > session_data['expires']:
+            del memory_db['admin_sessions'][token]
+            return jsonify({'error': 'Session expired'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+# ==================================================
+# Gemini AI Symptom Analysis
+# ==================================================
+def analyze_with_gemini(symptoms, patient_info=None):
+    """Use Gemini AI for comprehensive symptom analysis."""
+    if not GEMINI_AVAILABLE or not gemini_model:
+        return None
+    
+    try:
+        symptom_list = ', '.join(symptoms) if isinstance(symptoms, list) else symptoms
+        
+        patient_ctx = ""
+        if patient_info:
+            age = patient_info.get('age', 'not specified')
+            gender = patient_info.get('gender', 'not specified')
+            patient_ctx = f"\nPatient: {age} years old, {gender}"
+            if patient_info.get('medical_history'):
+                patient_ctx += f"\nMedical History: {patient_info.get('medical_history')}"
+        
+        prompt = f"""You are an expert AI medical assistant. Analyze these symptoms and provide detailed assessment.
+
+SYMPTOMS: {symptom_list}{patient_ctx}
+
+Respond ONLY with valid JSON (no markdown, no code blocks):
+{{
+    "primary_conditions": [
+        {{"name": "Condition", "probability": 80, "severity": "mild|moderate|severe", "description": "Brief description"}}
+    ],
+    "differential_diagnosis": ["Other condition 1", "Other condition 2"],
+    "risk_assessment": {{
+        "overall_risk": "low|medium|high|critical",
+        "urgency": "routine|soon|urgent|emergency",
+        "risk_factors": ["factor1", "factor2"]
+    }},
+    "symptom_analysis": {{
+        "most_significant": "Most concerning symptom",
+        "symptom_correlation": "How symptoms relate",
+        "red_flags": ["warning sign 1"]
+    }},
+    "recommendations": {{
+        "immediate_actions": ["action1", "action2"],
+        "lifestyle_changes": ["change1"],
+        "when_to_seek_help": "Seek help if...",
+        "specialists": ["Specialist type"]
+    }},
+    "follow_up_questions": ["Question 1", "Question 2"],
+    "confidence_score": 75,
+    "analysis_notes": "Additional observations",
+    "disclaimer": "AI analysis - consult healthcare professional"
+}}"""
+
+        response = gemini_model.generate_content(prompt)
+        text = response.text.strip()
+        
+        # Clean markdown if present
+        if '```' in text:
+            text = text.split('```')[1] if '```' in text else text
+            text = text.replace('json', '').strip()
+        
+        result = json.loads(text)
+        result['ai_provider'] = 'gemini'
+        result['model'] = 'gemini-pro'
+        return result
+        
+    except json.JSONDecodeError as e:
+        print(f"Gemini JSON error: {e}")
+        return None
+    except Exception as e:
+        print(f"Gemini error: {e}")
+        return None
+
+def rule_based_analysis(symptoms, patient_info=None):
+    """Fallback rule-based symptom analysis."""
+    symptom_db = {
+        'fever': ['flu', 'covid-19', 'infection', 'malaria', 'typhoid', 'dengue'],
+        'cough': ['flu', 'cold', 'bronchitis', 'covid-19', 'asthma', 'pneumonia', 'tuberculosis'],
+        'headache': ['migraine', 'tension headache', 'flu', 'dehydration', 'hypertension', 'sinusitis'],
+        'fatigue': ['anemia', 'diabetes', 'thyroid disorder', 'depression', 'chronic fatigue', 'sleep apnea'],
+        'chest pain': ['angina', 'heart disease', 'anxiety', 'acid reflux', 'muscle strain', 'costochondritis'],
+        'shortness of breath': ['asthma', 'heart failure', 'pneumonia', 'anxiety', 'copd', 'pulmonary embolism'],
+        'nausea': ['gastritis', 'food poisoning', 'pregnancy', 'migraine', 'vertigo', 'appendicitis'],
+        'vomiting': ['food poisoning', 'gastritis', 'infection', 'appendicitis', 'migraine'],
+        'dizziness': ['vertigo', 'low blood pressure', 'dehydration', 'anemia', 'inner ear infection'],
+        'joint pain': ['arthritis', 'injury', 'lupus', 'gout', 'fibromyalgia', 'lyme disease'],
+        'skin rash': ['allergy', 'eczema', 'psoriasis', 'infection', 'dermatitis', 'shingles'],
+        'abdominal pain': ['gastritis', 'appendicitis', 'ibs', 'ulcer', 'gallstones', 'pancreatitis'],
+        'back pain': ['muscle strain', 'herniated disc', 'kidney stones', 'arthritis', 'sciatica'],
+        'sore throat': ['cold', 'flu', 'strep throat', 'tonsillitis', 'mono'],
+        'runny nose': ['cold', 'flu', 'allergies', 'sinusitis'],
+        'muscle pain': ['flu', 'overexertion', 'fibromyalgia', 'infection', 'vitamin d deficiency'],
+        'frequent urination': ['diabetes', 'uti', 'overactive bladder', 'prostate issues'],
+        'weight loss': ['diabetes', 'hyperthyroidism', 'cancer', 'depression', 'celiac disease'],
+        'blurred vision': ['diabetes', 'eye strain', 'migraine', 'glaucoma', 'cataracts'],
+        'insomnia': ['anxiety', 'depression', 'sleep apnea', 'stress'],
+        'sweating': ['infection', 'hyperthyroidism', 'anxiety', 'menopause'],
+        'swelling': ['heart failure', 'kidney disease', 'injury', 'allergic reaction'],
+        'numbness': ['diabetes', 'stroke', 'carpal tunnel', 'multiple sclerosis', 'b12 deficiency'],
+        'palpitations': ['anxiety', 'arrhythmia', 'anemia', 'hyperthyroidism'],
+        'constipation': ['ibs', 'dehydration', 'hypothyroidism', 'medication side effect'],
+        'diarrhea': ['food poisoning', 'ibs', 'infection', 'celiac disease']
+    }
+    
+    severe_symptoms = ['chest pain', 'shortness of breath', 'numbness', 'severe headache', 'coughing blood', 'fainting']
+    
+    all_conditions = []
+    matched_symptoms = []
+    
+    for symptom in symptoms:
+        sym_lower = symptom.lower().strip()
+        for key, conditions in symptom_db.items():
+            if key in sym_lower or sym_lower in key:
+                all_conditions.extend(conditions)
+                matched_symptoms.append(key)
+    
+    if not all_conditions:
+        return {
+            "primary_conditions": [],
+            "risk_assessment": {"overall_risk": "unknown", "urgency": "routine"},
+            "recommendations": {"immediate_actions": ["Consult a healthcare professional for proper evaluation"]},
+            "confidence_score": 0,
+            "ai_provider": "rule_based"
+        }
+    
+    counts = Counter(all_conditions)
+    total = len(symptoms)
+    
+    primary = []
+    for condition, count in counts.most_common(5):
+        prob = min(round((count / total) * 100), 90)
+        severity = "severe" if any(s in [x.lower() for x in symptoms] for s in severe_symptoms) else "moderate" if count >= 2 else "mild"
+        primary.append({
+            "name": condition.replace('_', ' ').title(),
+            "probability": prob,
+            "severity": severity,
+            "description": f"Matched {count} of your symptoms"
+        })
+    
+    has_severe = any(s.lower() in [x.lower() for x in severe_symptoms] for s in symptoms)
+    
+    if has_severe:
+        risk, urgency = "high", "urgent"
+    elif len(symptoms) > 4:
+        risk, urgency = "medium", "soon"
+    else:
+        risk, urgency = "low", "routine"
+    
+    return {
+        "primary_conditions": primary,
+        "differential_diagnosis": [c for c, _ in counts.most_common(10)[5:]],
+        "risk_assessment": {
+            "overall_risk": risk,
+            "urgency": urgency,
+            "risk_factors": [f"{len(symptoms)} symptoms reported", f"{len(matched_symptoms)} recognized patterns"]
+        },
+        "symptom_analysis": {
+            "most_significant": matched_symptoms[0] if matched_symptoms else symptoms[0],
+            "symptom_correlation": f"Analyzed {len(symptoms)} symptoms",
+            "red_flags": [s for s in symptoms if s.lower() in severe_symptoms]
+        },
+        "recommendations": {
+            "immediate_actions": ["Monitor symptoms", "Stay hydrated", "Rest adequately"],
+            "lifestyle_changes": ["Maintain healthy diet", "Regular sleep schedule"],
+            "when_to_seek_help": "If symptoms worsen or persist beyond 48-72 hours",
+            "specialists": ["General Practitioner"] if risk == "low" else ["Specialist consultation recommended"]
+        },
+        "follow_up_questions": [
+            "How long have you had these symptoms?",
+            "Are symptoms getting better or worse?",
+            "Any medications currently taking?"
+        ],
+        "confidence_score": min(len(matched_symptoms) * 20, 70),
+        "disclaimer": "This is automated analysis. Please consult a healthcare professional.",
+        "ai_provider": "rule_based"
+    }
+
+# ==================================================
+# Database Operations
+# ==================================================
+def save_to_db(user_id, diagnosis_type, input_data, result_data, risk_level):
+    record = {
+        'id': generate_token()[:32],
+        'user_id': user_id,
+        'diagnosis_type': diagnosis_type,
+        'input_data': input_data,
+        'result_data': result_data,
+        'risk_level': risk_level,
+        'created_at': datetime.now().isoformat()
+    }
+    
+    if SUPABASE_AVAILABLE:
+        try:
+            supabase.table('diagnosis_results').insert({
+                'user_id': user_id,
+                'diagnosis_type': diagnosis_type,
+                'input_data': json.dumps(input_data) if isinstance(input_data, dict) else str(input_data),
+                'result_data': json.dumps(result_data) if isinstance(result_data, dict) else str(result_data),
+                'risk_level': risk_level
+            }).execute()
+            return {'success': True}
+        except Exception as e:
+            print(f"DB save error: {e}")
+    
+    memory_db['diagnosis_history'].append(record)
+    return {'success': True}
+
+def get_history(user_id, limit=50):
+    if SUPABASE_AVAILABLE:
+        try:
+            result = supabase.table('diagnosis_results').select('*').eq('user_id', user_id).order('created_at', desc=True).limit(limit).execute()
+            return result.data
+        except Exception as e:
+            print(f"DB fetch error: {e}")
+    
+    return [r for r in memory_db['diagnosis_history'] if r['user_id'] == user_id][-limit:]
+
+def get_all_stats():
+    if SUPABASE_AVAILABLE:
+        try:
+            diagnoses = supabase.table('diagnosis_results').select('*').execute()
+            profiles = supabase.table('profiles').select('*').execute()
+            return {
+                'total_diagnoses': len(diagnoses.data),
+                'total_users': len(profiles.data),
+                'diagnoses': diagnoses.data,
+                'users': profiles.data
+            }
+        except Exception as e:
+            print(f"Stats error: {e}")
+    
+    return {
+        'total_diagnoses': len(memory_db['diagnosis_history']),
+        'total_users': len(set(d['user_id'] for d in memory_db['diagnosis_history'])),
+        'diagnoses': memory_db['diagnosis_history'],
+        'users': []
+    }
+
+def calculate_trends(user_id):
+    history = get_history(user_id, 100)
+    if not history:
+        return {'message': 'No history available', 'total_assessments': 0}
+    
+    risk_levels = [h.get('risk_level', 'unknown') for h in history]
+    types = [h.get('diagnosis_type', 'unknown') for h in history]
+    
+    risk_scores = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+    values = [risk_scores.get(r, 0) for r in risk_levels]
+    avg_risk = sum(values) / len(values) if values else 0
+    
+    # Trend calculation
+    if len(values) >= 4:
+        recent = sum(values[:len(values)//2]) / (len(values)//2)
+        older = sum(values[len(values)//2:]) / (len(values) - len(values)//2)
+        trend = "improving" if recent < older - 0.3 else "worsening" if recent > older + 0.3 else "stable"
+    else:
+        trend = "insufficient_data"
+    
+    return {
+        'total_assessments': len(history),
+        'risk_distribution': dict(Counter(risk_levels)),
+        'diagnosis_types': dict(Counter(types)),
+        'average_risk': round(avg_risk, 2),
+        'health_trend': trend,
+        'most_common': Counter(types).most_common(1)[0][0] if types else None,
+        'last_assessment': history[0].get('created_at') if history else None,
+        'chart_data': {
+            'risk_values': values[:15],
+            'risk_labels': risk_levels[:15]
+        }
+    }
+
+# ==================================================
+# API Routes - Admin
+# ==================================================
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    data = request.json
+    if data.get('email') == ADMIN_EMAIL and data.get('password') == ADMIN_PASSWORD:
+        token = generate_token()
+        memory_db['admin_sessions'][token] = {
+            'email': data['email'],
+            'expires': datetime.now() + timedelta(hours=24)
+        }
+        return jsonify({'success': True, 'token': token, 'expires_in': 86400})
+    return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+
+@app.route('/api/admin/logout', methods=['POST'])
+@admin_required
+def admin_logout():
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    memory_db['admin_sessions'].pop(token, None)
+    return jsonify({'success': True})
+
+@app.route('/api/admin/verify', methods=['GET'])
+@admin_required
+def admin_verify():
+    return jsonify({'success': True, 'admin_email': ADMIN_EMAIL})
+
+@app.route('/api/admin/stats', methods=['GET'])
+@admin_required
+def admin_stats():
+    stats = get_all_stats()
+    diagnoses = stats.get('diagnoses', [])
+    
+    risk_dist = Counter([d.get('risk_level', 'unknown') for d in diagnoses])
+    type_dist = Counter([d.get('diagnosis_type', 'unknown') for d in diagnoses])
+    
+    today = datetime.now().date()
+    today_count = sum(1 for d in diagnoses if d.get('created_at', '').startswith(str(today)))
+    
+    return jsonify({
+        'total_users': stats['total_users'],
+        'total_diagnoses': stats['total_diagnoses'],
+        'today_diagnoses': today_count,
+        'risk_distribution': dict(risk_dist),
+        'diagnosis_types': dict(type_dist),
+        'chart_data': {
+            'risk_labels': list(risk_dist.keys()),
+            'risk_values': list(risk_dist.values()),
+            'type_labels': list(type_dist.keys()),
+            'type_values': list(type_dist.values())
+        }
+    })
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def admin_users():
+    stats = get_all_stats()
+    users = stats.get('users', [])
+    diagnoses = stats.get('diagnoses', [])
+    
+    user_diags = {}
+    for d in diagnoses:
+        uid = d.get('user_id')
+        if uid:
+            user_diags.setdefault(uid, []).append(d)
+    
+    enhanced = []
+    for u in users:
+        uid = u.get('id')
+        diags = user_diags.get(uid, [])
+        enhanced.append({
+            **u,
+            'total_assessments': len(diags),
+            'last_assessment': diags[0].get('created_at') if diags else None,
+            'risk_summary': dict(Counter([d.get('risk_level') for d in diags]))
+        })
+    
+    return jsonify({'users': enhanced})
+
+@app.route('/api/admin/user/<user_id>/history', methods=['GET'])
+@admin_required
+def admin_user_history(user_id):
+    return jsonify({
+        'user_id': user_id,
+        'history': get_history(user_id, 100),
+        'trends': calculate_trends(user_id)
+    })
+
+# ==================================================
+# API Routes - Symptom Analysis
+# ==================================================
+@app.route('/api/symptoms/analyze', methods=['POST'])
+def analyze_symptoms():
+    try:
+        data = request.json
+        symptoms = data.get('symptoms', [])
+        patient_info = data.get('patient_info', {})
+        user_id = data.get('user_id')
+        
+        if isinstance(symptoms, str):
+            symptoms = [s.strip() for s in symptoms.split(',') if s.strip()]
+        
+        if not symptoms:
+            return jsonify({'error': 'No symptoms provided'}), 400
+        
+        # Try Gemini first
+        result = analyze_with_gemini(symptoms, patient_info) if GEMINI_AVAILABLE else None
+        
+        # Fallback to rule-based
+        if not result:
+            result = rule_based_analysis(symptoms, patient_info)
+        
+        result['symptoms_analyzed'] = symptoms
+        result['timestamp'] = datetime.now().isoformat()
+        
+        if user_id:
+            risk = result.get('risk_assessment', {}).get('overall_risk', 'unknown')
+            save_to_db(user_id, 'symptoms', {'symptoms': symptoms, 'patient_info': patient_info}, result, risk)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/symptoms/history/<user_id>', methods=['GET'])
+def symptom_history(user_id):
+    history = get_history(user_id)
+    return jsonify({'history': [h for h in history if h.get('diagnosis_type') == 'symptoms']})
+
+# ==================================================
+# API Routes - Diagnosis
+# ==================================================
+@app.route('/api/diabetes', methods=['POST'])
+def diabetes():
+    data = request.json
+    user_id = data.get('user_id')
+    
+    if not data.get('bmi'):
+        w, h = safe_float(data.get('weight')), safe_float(data.get('height'))
+        if w > 0 and h > 0:
+            data['bmi'] = round(w / ((h/100)**2), 2)
+    
+    # Scoring
+    score = 0
+    if safe_int(data.get('age')) > 60: score += 3
+    elif safe_int(data.get('age')) > 45: score += 2
+    
+    bmi = safe_float(data.get('bmi', 25))
+    if bmi > 35: score += 4
+    elif bmi > 30: score += 3
+    elif bmi > 25: score += 2
+    
+    if str(data.get('family_history', '')).lower() == 'yes': score += 3
+    if str(data.get('physical_activity', '')).lower() in ['sedentary', 'none']: score += 2
+    
+    for s in ['frequent_urination', 'excessive_thirst', 'tiredness', 'blurred_vision', 'slow_healing']:
+        if str(data.get(s, '')).lower() == 'yes': score += 1
+    
+    prob = min((score / 20) * 100, 100)
+    risk = 'high' if prob >= 55 else 'medium' if prob >= 30 else 'low'
+    
+    result = {
+        'prediction': f"{risk.title()} Risk",
+        'probability': round(prob, 1),
+        'risk_level': risk,
+        'bmi': bmi,
+        'bmi_category': 'Underweight' if bmi < 18.5 else 'Normal' if bmi < 25 else 'Overweight' if bmi < 30 else 'Obese'
+    }
+    
+    if user_id:
+        save_to_db(user_id, 'diabetes', data, result, risk)
+    
+    return jsonify(result)
+
+@app.route('/api/lung', methods=['POST'])
+def lung():
+    data = request.json
+    user_id = data.get('user_id')
+    
+    score = 0
+    if safe_int(data.get('age')) > 65: score += 3
+    elif safe_int(data.get('age')) > 55: score += 2
+    
+    smoking = str(data.get('smoking', data.get('smokingHistory', ''))).lower()
+    if smoking in ['current', 'yes']: score += 5
+    elif smoking == 'former': score += 3
+    
+    if str(data.get('familyHistory', data.get('genetic_risk', ''))).lower() == 'yes': score += 3
+    if str(data.get('chest_pain', data.get('chestPain', ''))).lower() in ['yes', 'frequent']: score += 2
+    if str(data.get('weight_loss', data.get('weightLoss', ''))).lower() == 'yes': score += 2
+    if str(data.get('shortness_of_breath', data.get('breathShortness', ''))).lower() in ['yes', 'rest']: score += 2
+    
+    prob = min((score / 20) * 100, 100)
+    risk = 'high' if prob >= 50 else 'medium' if prob >= 25 else 'low'
+    
+    result = {'prediction': f"{risk.title()} Risk", 'probability': round(prob, 1), 'risk_level': risk}
+    
+    if user_id:
+        save_to_db(user_id, 'lung', data, result, risk)
+    
+    return jsonify(result)
+
+@app.route('/api/bp', methods=['POST'])
+def bp():
+    data = request.json
+    user_id = data.get('user_id')
+    
+    sys, dia = safe_int(data.get('systolic', 120)), safe_int(data.get('diastolic', 80))
+    
+    if sys < 120 and dia < 80:
+        cat, risk, prob = "Normal", "low", 10
+    elif sys < 130 and dia < 80:
+        cat, risk, prob = "Elevated", "medium", 35
+    elif sys >= 180 or dia >= 120:
+        cat, risk, prob = "Hypertensive Crisis", "critical", 95
+    elif sys >= 140 or dia >= 90:
+        cat, risk, prob = "Hypertension Stage 2", "high", 75
+    else:
+        cat, risk, prob = "Hypertension Stage 1", "medium", 55
+    
+    result = {'prediction': cat, 'probability': prob, 'risk_level': risk, 'systolic': sys, 'diastolic': dia}
+    
+    if user_id:
+        save_to_db(user_id, 'bp', data, result, risk)
+    
+    return jsonify(result)
+
+# ==================================================
+# API Routes - User Data
+# ==================================================
+@app.route('/api/user/<user_id>/history', methods=['GET'])
+def user_history(user_id):
+    return jsonify({'history': get_history(user_id)})
+
+@app.route('/api/user/<user_id>/trends', methods=['GET'])
+def user_trends(user_id):
+    return jsonify(calculate_trends(user_id))
+
+# ==================================================
+# Health Check
+# ==================================================
+@app.route('/')
+def home():
+    return jsonify({
+        'service': 'MedAI Backend API',
+        'version': '2.0.0',
+        'status': 'running',
+        'features': {'gemini_ai': GEMINI_AVAILABLE, 'supabase': SUPABASE_AVAILABLE}
+    })
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({
+        'status': 'healthy',
+        'gemini': GEMINI_AVAILABLE,
+        'supabase': SUPABASE_AVAILABLE,
+        'admin_email': ADMIN_EMAIL
+    })
+
+# ==================================================
+# Run
+# ==================================================
+if __name__ == '__main__':
+    print("\n" + "="*60)
+    print("   🏥 MedAI Backend Server v2.0")
+    print("="*60)
+    print(f"\n🔑 Admin: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
+    print(f"🤖 Gemini AI: {'✅ Ready' if GEMINI_AVAILABLE else '❌ Not configured'}")
+    print(f"💾 Supabase: {'✅ Connected' if SUPABASE_AVAILABLE else '⚠ Using memory storage'}")
+    print(f"\n🌐 Server: http://localhost:5000")
+    print("\n📌 Key Endpoints:")
+    print("   POST /api/admin/login")
+    print("   POST /api/symptoms/analyze")
+    print("   GET  /api/user/<id>/trends")
+    print("="*60 + "\n")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000)

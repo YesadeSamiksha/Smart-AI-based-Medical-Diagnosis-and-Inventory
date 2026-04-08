@@ -33,44 +33,46 @@ function initBallpit() {
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     const envMap = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
     
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // Lighting - reduced intensity for subtler effect
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
     
-    const light1 = new THREE.PointLight(0x6366f1, 300);
+    const light1 = new THREE.PointLight(0x4338ca, 150);  // Darker indigo, lower intensity
     light1.position.set(10, 10, 10);
     scene.add(light1);
     
-    const light2 = new THREE.PointLight(0x8b5cf6, 300);
+    const light2 = new THREE.PointLight(0x6d28d9, 150);  // Darker purple, lower intensity
     light2.position.set(-10, -10, 10);
     scene.add(light2);
     
     // Ball configuration
     const config = {
-        count: 100,
-        colors: [0x6366f1, 0x8b5cf6, 0x4f46e5, 0xec4899, 0xa5b4fc],
+        count: 35,  // Reduced from 100
+        colors: [0x3730a3, 0x4c1d95, 0x312e81, 0x831843, 0x6366f1],  // Darker, more muted colors
         gravity: 0,
         friction: 0.998,        // Less friction - balls slow down less
         wallBounce: 0.95,       // More bounce off walls
-        minSize: 0.4,
-        maxSize: 1.0,
-        initialVelocity: 0.08,  // Faster initial velocity
-        cursorForce: 0.15,
+        minSize: 0.3,           // Smaller balls
+        maxSize: 0.8,
+        initialVelocity: 0.06,  // Slower movement
+        cursorForce: 0.12,
         cursorRadius: 4,
-        driftForce: 0.002,      // Constant small random force to keep moving
-        minSpeed: 0.02          // Minimum speed to maintain
+        driftForce: 0.0015,     // Gentler drift
+        minSpeed: 0.015         // Minimum speed to maintain
     };
     
-    // Create spheres
+    // Create spheres with reduced reflectivity
     const geometry = new THREE.SphereGeometry(1, 32, 32);
     const material = new THREE.MeshPhysicalMaterial({
         envMap,
-        metalness: 0.1,
-        roughness: 0.2,
-        clearcoat: 1,
-        clearcoatRoughness: 0.1,
-        reflectivity: 1,
-        envMapIntensity: 1.5
+        metalness: 0.05,
+        roughness: 0.4,         // More matte
+        clearcoat: 0.5,         // Reduced clearcoat
+        clearcoatRoughness: 0.3,
+        reflectivity: 0.5,      // Less reflective
+        envMapIntensity: 0.8,   // Reduced environment reflection
+        transparent: true,
+        opacity: 0.7            // Slightly transparent
     });
     
     const spheres = new THREE.InstancedMesh(geometry, material, config.count);

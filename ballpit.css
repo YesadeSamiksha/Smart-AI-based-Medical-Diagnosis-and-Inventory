@@ -5,13 +5,14 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 0;
-    pointer-events: auto;
+    z-index: -1 !important;
+    pointer-events: none;
 }
 
 /* Ensure body has proper background for transparency */
 body {
     background: #0a0a0f;
+    position: relative;
 }
 
 /* Content should be above ballpit */
@@ -27,6 +28,19 @@ main,
 section {
     position: relative;
     z-index: 1;
+}
+
+/* Sidebar styling */
+.sidebar {
+    position: relative;
+    z-index: 10;
+    background: rgba(10, 10, 15, 0.95) !important;
+}
+
+/* Dashboard cards need proper background */
+.dashboard-card {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(10px);
 }
 
 /* Nav should be above everything */

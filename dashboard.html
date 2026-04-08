@@ -23,17 +23,25 @@
             color: white;
         }
         .sidebar {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(10, 10, 15, 0.95);
             min-height: 100vh;
             padding: 2rem 1rem;
             border-right: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        .main-content {
+            position: relative;
+            z-index: 5;
+            background: rgba(10, 10, 15, 0.85);
         }
         .dashboard-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
         .dashboard-card:hover {
             transform: translateY(-5px);
@@ -52,7 +60,7 @@
     <!-- Ballpit Background Canvas -->
     <canvas id="ballpitCanvas"></canvas>
     
-    <div class="d-flex" style="position: relative; z-index: 1;">
+    <div class="d-flex" style="position: relative; z-index: 10;">
         <!-- Sidebar -->
         <nav class="sidebar" style="width: 250px;">
             <div class="text-center mb-4">
@@ -64,21 +72,6 @@
                 <li class="nav-item mb-2">
                     <a href="dashboard.html" class="nav-link text-white active">
                         <i class="fas fa-home me-2"></i> Dashboard
-                    </a>
-                </li>
-                <li class="nav-item mb-2">
-                    <a href="diagnosis-diabetes.html" class="nav-link text-white-50">
-                        <i class="fas fa-tint me-2"></i> Diabetes Assessment
-                    </a>
-                </li>
-                <li class="nav-item mb-2">
-                    <a href="diagnosis-lung.html" class="nav-link text-white-50">
-                        <i class="fas fa-lungs me-2"></i> Lung Cancer Screening
-                    </a>
-                </li>
-                <li class="nav-item mb-2">
-                    <a href="diagnosis-bp.html" class="nav-link text-white-50">
-                        <i class="fas fa-heart-pulse me-2"></i> Blood Pressure
                     </a>
                 </li>
                 <li class="nav-item mb-2">

@@ -14,43 +14,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <link rel="stylesheet" href="styles.css">
-    
-    <!-- Ballpit Background -->
     <link rel="stylesheet" href="ballpit.css">
     
     <style>
-        body {
-            background: #0a0a0f;
-            color: #ffffff;
-            min-height: 100vh;
-        }
-        
-        .diagnosis-container {
-            max-width: 800px;
-            margin: 100px auto 50px;
-            padding: 20px;
-        }
-        
+        body { background: #0a0a0f; color: #ffffff; min-height: 100vh; }
+        .diagnosis-container { max-width: 900px; margin: 80px auto 50px; padding: 20px; position: relative; z-index: 10; }
         .diagnosis-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(10, 10, 15, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
             padding: 40px;
             backdrop-filter: blur(10px);
         }
-        
-        .form-group {
-            margin-bottom: 24px;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #e5e7eb;
-        }
-        
-        .form-input {
+        .section-title { color: #6366f1; font-weight: 600; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(99, 102, 241, 0.3); }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #e5e7eb; }
+        .form-input, .form-select {
             width: 100%;
             padding: 12px 16px;
             background: rgba(255, 255, 255, 0.05);
@@ -60,13 +39,11 @@
             font-size: 16px;
             transition: all 0.3s ease;
         }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: #6366f1;
-            background: rgba(255, 255, 255, 0.08);
-        }
-        
+        .form-input:focus, .form-select:focus { outline: none; border-color: #6366f1; background: rgba(255, 255, 255, 0.08); }
+        .form-select option { background: #1a1a2e; color: white; }
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .row-2, .row-3 { grid-template-columns: 1fr; } }
         .btn-diagnose {
             width: 100%;
             padding: 16px;
@@ -78,13 +55,10 @@
             font-size: 18px;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-top: 20px;
         }
-        
-        .btn-diagnose:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
-        }
-        
+        .btn-diagnose:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); }
+        .btn-diagnose:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .result-card {
             margin-top: 30px;
             padding: 30px;
@@ -93,317 +67,409 @@
             border-radius: 16px;
             display: none;
         }
-        
-        .result-card.show {
-            display: block;
-            animation: slideIn 0.5s ease;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .risk-level {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
-        
+        .result-card.show { display: block; animation: slideIn 0.5s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .risk-level { font-size: 28px; font-weight: 700; margin-bottom: 16px; }
         .risk-low { color: #10b981; }
         .risk-medium { color: #f59e0b; }
         .risk-high { color: #ef4444; }
+        .bmi-result { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-top: 20px; }
+        .probability-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin: 12px 0; }
+        .probability-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .api-status { font-size: 12px; color: #9ca3af; margin-top: 8px; }
     </style>
 </head>
 <body>
-    <!-- Ballpit Background Canvas -->
     <canvas id="ballpitCanvas"></canvas>
     
-    <div class="diagnosis-container" style="position: relative; z-index: 1;">
-        <!-- Back Button -->
+    <div class="diagnosis-container">
         <a href="dashboard.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
             <i class="fas fa-arrow-left"></i>
             <span>Back to Dashboard</span>
         </a>
         
-        <!-- Main Card -->
         <div class="diagnosis-card">
             <div class="text-center mb-8">
                 <i class="fas fa-heartbeat text-6xl text-pink-400 mb-4"></i>
                 <h1 class="text-4xl font-bold mb-2">Diabetes Risk Assessment</h1>
-                <p class="text-gray-400">Enter your health metrics for an AI-powered diabetes risk analysis</p>
+                <p class="text-gray-400">Complete the form below for an AI-powered diabetes risk analysis</p>
             </div>
             
             <form id="diabetesForm">
-                <div class="form-group">
-                    <label class="form-label" for="glucose">Glucose Level (mg/dL)</label>
-                    <input type="number" id="glucose" class="form-input" placeholder="e.g., 120" min="0" max="300" required>
+                <!-- Personal Information -->
+                <h3 class="section-title"><i class="fas fa-user me-2"></i>Personal Information</h3>
+                <div class="row-3">
+                    <div class="form-group">
+                        <label class="form-label">Age *</label>
+                        <input type="number" id="age" class="form-input" placeholder="e.g., 45" min="18" max="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender *</label>
+                        <select id="gender" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Family History of Diabetes *</label>
+                        <select id="family_history" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
                 </div>
                 
+                <!-- BMI Section -->
+                <h3 class="section-title"><i class="fas fa-weight me-2"></i>BMI Information</h3>
                 <div class="form-group">
-                    <label class="form-label" for="bmi">BMI (Body Mass Index)</label>
-                    <input type="number" step="0.1" id="bmi" class="form-input" placeholder="e.g., 25.5" min="10" max="60" required>
+                    <label class="form-label">Do you know your BMI?</label>
+                    <select id="bmi_known" class="form-select" onchange="toggleBMIFields()">
+                        <option value="no">No, calculate from weight/height</option>
+                        <option value="yes">Yes, I know my BMI</option>
+                    </select>
+                </div>
+                <div id="bmi_direct" class="form-group" style="display:none;">
+                    <label class="form-label">Enter your BMI *</label>
+                    <input type="number" step="0.1" id="bmi" class="form-input" placeholder="e.g., 25.5" min="10" max="60">
+                </div>
+                <div id="bmi_calc" class="row-2">
+                    <div class="form-group">
+                        <label class="form-label">Weight (kg) *</label>
+                        <input type="number" step="0.1" id="weight" class="form-input" placeholder="e.g., 70" min="20" max="300">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Height (cm) *</label>
+                        <input type="number" step="0.1" id="height" class="form-input" placeholder="e.g., 170" min="100" max="250">
+                    </div>
                 </div>
                 
+                <!-- Lifestyle Factors -->
+                <h3 class="section-title"><i class="fas fa-running me-2"></i>Lifestyle Factors</h3>
+                <div class="row-2">
+                    <div class="form-group">
+                        <label class="form-label">Physical Activity Level *</label>
+                        <select id="physical_activity" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="sedentary">Sedentary (little or no exercise)</option>
+                            <option value="light">Light (1-3 days/week)</option>
+                            <option value="moderate">Moderate (3-5 days/week)</option>
+                            <option value="active">Active (6-7 days/week)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Diet Quality *</label>
+                        <select id="diet_quality" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="poor">Poor (high processed foods)</option>
+                            <option value="fair">Fair (some healthy choices)</option>
+                            <option value="good">Good (mostly balanced)</option>
+                            <option value="excellent">Excellent (very healthy)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row-3">
+                    <div class="form-group">
+                        <label class="form-label">Smoking Status *</label>
+                        <select id="smoking" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="no">Never</option>
+                            <option value="former">Former smoker</option>
+                            <option value="yes">Current smoker</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Alcohol Consumption</label>
+                        <select id="alcohol" class="form-select">
+                            <option value="no">None/Rarely</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="heavy">Heavy</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stress Level *</label>
+                        <select id="stress_level" class="form-select" required>
+                            <option value="">Select</option>
+                            <option value="low">Low</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="form-group">
-                    <label class="form-label" for="age">Age (years)</label>
-                    <input type="number" id="age" class="form-input" placeholder="e.g., 45" min="1" max="120" required>
+                    <label class="form-label">Average Sleep Hours</label>
+                    <input type="number" step="0.5" id="sleep_hours" class="form-input" placeholder="e.g., 7" min="3" max="12" value="7">
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label" for="insulin">Insulin Level (μU/mL)</label>
-                    <input type="number" id="insulin" class="form-input" placeholder="e.g., 80" min="0" max="900" required>
+                <!-- Symptoms -->
+                <h3 class="section-title"><i class="fas fa-stethoscope me-2"></i>Symptoms (Select if present)</h3>
+                <div class="row-2">
+                    <div class="form-group">
+                        <label class="form-label">Frequent Urination *</label>
+                        <select id="frequent_urination" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Excessive Thirst *</label>
+                        <select id="excessive_thirst" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row-2">
+                    <div class="form-group">
+                        <label class="form-label">Unexplained Tiredness *</label>
+                        <select id="tiredness" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Blurred Vision *</label>
+                        <select id="blurred_vision" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row-3">
+                    <div class="form-group">
+                        <label class="form-label">Slow Wound Healing *</label>
+                        <select id="slow_healing" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Dark Skin Patches *</label>
+                        <select id="dark_skin_patches" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Frequent Infections *</label>
+                        <select id="frequent_infections" class="form-select" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label" for="bloodPressure">Blood Pressure (mm Hg)</label>
-                    <input type="number" id="bloodPressure" class="form-input" placeholder="e.g., 72" min="40" max="200" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="skinThickness">Skin Thickness (mm)</label>
-                    <input type="number" id="skinThickness" class="form-input" placeholder="e.g., 20" min="0" max="100" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="pregnancies">Number of Pregnancies</label>
-                    <input type="number" id="pregnancies" class="form-input" placeholder="e.g., 0" min="0" max="20" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="diabetesPedigree">Diabetes Pedigree Function</label>
-                    <input type="number" step="0.001" id="diabetesPedigree" class="form-input" placeholder="e.g., 0.5" min="0" max="3" required>
-                </div>
-                
-                <button type="submit" class="btn-diagnose">
+                <button type="submit" class="btn-diagnose" id="submitBtn">
                     <i class="fas fa-brain mr-2"></i>
-                    Analyze Risk
+                    Analyze Diabetes Risk
                 </button>
             </form>
             
             <!-- Result Card -->
             <div id="resultCard" class="result-card">
-                <h3 class="text-2xl font-bold mb-4">Analysis Results</h3>
+                <h3 class="text-2xl font-bold mb-4"><i class="fas fa-chart-pie me-2"></i>Analysis Results</h3>
                 <div id="riskLevel" class="risk-level"></div>
-                <div id="riskDescription" class="text-gray-300 mb-4"></div>
+                <div class="probability-bar">
+                    <div id="probabilityFill" class="probability-fill"></div>
+                </div>
+                <div id="probabilityText" class="text-gray-400 mb-4"></div>
+                <div id="bmiResult" class="bmi-result" style="display:none;"></div>
+                <div id="riskDescription" class="text-gray-300 mb-4 mt-4"></div>
                 <div id="recommendations" class="mt-4"></div>
+                <p id="apiStatus" class="api-status"></p>
             </div>
         </div>
     </div>
     
     <script>
-        // Initialize Supabase
-        document.addEventListener('DOMContentLoaded', function() {
-            window.MedAISupabase.initSupabase();
-        });
+        const API_BASE = 'http://localhost:5000';
+        
+        function toggleBMIFields() {
+            const bmiKnown = document.getElementById('bmi_known').value;
+            document.getElementById('bmi_direct').style.display = bmiKnown === 'yes' ? 'block' : 'none';
+            document.getElementById('bmi_calc').style.display = bmiKnown === 'yes' ? 'none' : 'grid';
+        }
         
         document.getElementById('diabetesForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Collect form data
-            const formData = {
-                glucose: parseFloat(document.getElementById('glucose').value),
-                bmi: parseFloat(document.getElementById('bmi').value),
-                age: parseInt(document.getElementById('age').value),
-                insulin: parseFloat(document.getElementById('insulin').value),
-                bloodPressure: parseFloat(document.getElementById('bloodPressure').value),
-                skinThickness: parseFloat(document.getElementById('skinThickness').value),
-                pregnancies: parseInt(document.getElementById('pregnancies').value),
-                diabetesPedigree: parseFloat(document.getElementById('diabetesPedigree').value)
-            };
-            
-            // Show loading state
-            const btn = e.target.querySelector('button[type="submit"]');
+            const btn = document.getElementById('submitBtn');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
             btn.disabled = true;
             
-            // Simulate AI analysis
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Collect form data
+            const formData = {
+                age: parseInt(document.getElementById('age').value),
+                gender: document.getElementById('gender').value,
+                family_history: document.getElementById('family_history').value,
+                physical_activity: document.getElementById('physical_activity').value,
+                diet_quality: document.getElementById('diet_quality').value,
+                smoking: document.getElementById('smoking').value,
+                alcohol: document.getElementById('alcohol').value,
+                stress_level: document.getElementById('stress_level').value,
+                sleep_hours: parseFloat(document.getElementById('sleep_hours').value) || 7,
+                frequent_urination: document.getElementById('frequent_urination').value,
+                excessive_thirst: document.getElementById('excessive_thirst').value,
+                tiredness: document.getElementById('tiredness').value,
+                blurred_vision: document.getElementById('blurred_vision').value,
+                slow_healing: document.getElementById('slow_healing').value,
+                dark_skin_patches: document.getElementById('dark_skin_patches').value,
+                frequent_infections: document.getElementById('frequent_infections').value
+            };
             
-            // Calculate risk (simplified algorithm for demo)
-            const riskScore = calculateDiabetesRisk(formData);
-            
-            // Determine risk level for database
-            let riskLevel;
-            if (riskScore >= 10) {
-                riskLevel = 'high';
-            } else if (riskScore >= 6) {
-                riskLevel = 'medium';
+            // Handle BMI
+            if (document.getElementById('bmi_known').value === 'yes') {
+                formData.bmi = parseFloat(document.getElementById('bmi').value);
             } else {
-                riskLevel = 'low';
+                formData.weight = parseFloat(document.getElementById('weight').value);
+                formData.height = parseFloat(document.getElementById('height').value);
+            }
+            
+            let result;
+            let usedAPI = false;
+            
+            try {
+                // Try API first
+                const response = await fetch(`${API_BASE}/api/diabetes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    result = await response.json();
+                    usedAPI = true;
+                } else {
+                    throw new Error('API error');
+                }
+            } catch (err) {
+                console.log('API not available, using client-side prediction');
+                result = clientSidePrediction(formData);
             }
             
             // Save to Supabase
-            const resultData = {
-                score: riskScore,
-                riskLevel: riskLevel,
-                recommendations: getRiskRecommendations(riskLevel)
-            };
-            
             try {
-                await window.MedAIDatabase.saveDiagnosisResult('diabetes', formData, resultData, riskLevel);
-                console.log('✅ Diabetes assessment saved to database');
+                if (window.MedAIDatabase) {
+                    await window.MedAIDatabase.saveDiagnosisResult('diabetes', formData, result, result.risk_level);
+                }
             } catch (err) {
-                console.error('Error saving assessment:', err);
+                console.error('Error saving to database:', err);
             }
             
             // Display results
-            displayResults(riskScore);
+            displayResults(result, usedAPI);
             
-            // Reset button
-            btn.innerHTML = '<i class="fas fa-brain mr-2"></i> Analyze Risk';
+            btn.innerHTML = '<i class="fas fa-brain mr-2"></i> Analyze Diabetes Risk';
             btn.disabled = false;
         });
         
-        function calculateDiabetesRisk(data) {
+        function clientSidePrediction(data) {
             let score = 0;
+            const age = data.age || 0;
+            const bmi = data.bmi || (data.weight && data.height ? data.weight / Math.pow(data.height/100, 2) : 25);
             
-            // Glucose risk
-            if (data.glucose > 140) score += 3;
-            else if (data.glucose > 100) score += 2;
-            else if (data.glucose > 80) score += 1;
+            if (age > 60) score += 3;
+            else if (age > 45) score += 2;
+            else if (age > 35) score += 1;
             
-            // BMI risk
-            if (data.bmi > 30) score += 3;
-            else if (data.bmi > 25) score += 2;
-            else if (data.bmi > 22) score += 1;
+            if (bmi > 35) score += 4;
+            else if (bmi > 30) score += 3;
+            else if (bmi > 25) score += 2;
             
-            // Age risk
-            if (data.age > 60) score += 2;
-            else if (data.age > 45) score += 1;
+            if (data.family_history === 'yes') score += 3;
+            if (data.physical_activity === 'sedentary') score += 2;
+            else if (data.physical_activity === 'light') score += 1;
+            if (data.diet_quality === 'poor') score += 2;
+            if (data.smoking === 'yes') score += 1;
             
-            // Insulin risk
-            if (data.insulin > 200) score += 2;
-            else if (data.insulin > 100) score += 1;
+            const symptoms = ['frequent_urination', 'excessive_thirst', 'tiredness', 'blurred_vision', 'slow_healing', 'dark_skin_patches', 'frequent_infections'];
+            symptoms.forEach(s => { if (data[s] === 'yes') score += 1; });
             
-            // Blood pressure risk
-            if (data.bloodPressure > 90) score += 2;
-            else if (data.bloodPressure > 80) score += 1;
+            const probability = Math.min((score / 22) * 100, 100);
+            let risk_level, prediction;
             
-            // Pedigree risk
-            if (data.diabetesPedigree > 0.8) score += 2;
-            else if (data.diabetesPedigree > 0.5) score += 1;
+            if (probability >= 55) { risk_level = 'high'; prediction = 'High Risk'; }
+            else if (probability >= 30) { risk_level = 'medium'; prediction = 'Medium Risk'; }
+            else { risk_level = 'low'; prediction = 'Low Risk'; }
             
-            return score;
-        }
-        
-        function getRiskRecommendations(riskLevel) {
-            const recommendations = {
-                high: [
-                    'Consult with an endocrinologist immediately',
-                    'Get a comprehensive metabolic panel done',
-                    'Start monitoring blood glucose daily',
-                    'Consider dietary changes (reduce carbs and sugar)',
-                    'Increase physical activity to at least 30 mins/day'
-                ],
-                medium: [
-                    'Schedule a check-up with your doctor',
-                    'Monitor your blood glucose periodically',
-                    'Maintain a healthy diet with whole grains and vegetables',
-                    'Exercise regularly (150 mins/week recommended)',
-                    'Manage stress and get adequate sleep'
-                ],
-                low: [
-                    'Continue your healthy lifestyle habits',
-                    'Annual health check-ups recommended',
-                    'Stay physically active',
-                    'Maintain a balanced diet',
-                    'Keep stress levels in check'
-                ]
+            return {
+                prediction, probability: Math.round(probability), risk_level, bmi: Math.round(bmi * 10) / 10,
+                bmi_category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese',
+                model_type: 'client_side'
             };
-            return recommendations[riskLevel] || recommendations.low;
         }
         
-        function displayResults(score) {
+        function displayResults(result, usedAPI) {
             const resultCard = document.getElementById('resultCard');
             const riskLevel = document.getElementById('riskLevel');
+            const probabilityFill = document.getElementById('probabilityFill');
+            const probabilityText = document.getElementById('probabilityText');
+            const bmiResult = document.getElementById('bmiResult');
             const riskDescription = document.getElementById('riskDescription');
             const recommendations = document.getElementById('recommendations');
+            const apiStatus = document.getElementById('apiStatus');
             
-            let level, description, recs, className;
+            const level = result.prediction || result.risk_level;
+            const prob = result.probability || 0;
             
-            if (score >= 10) {
-                level = 'High Risk';
-                className = 'risk-high';
-                description = 'Based on your health metrics, you show several indicators associated with increased diabetes risk.';
-                recs = `
-                    <div class="bg-red-500 bg-opacity-10 border border-red-500 rounded-lg p-4">
-                        <h4 class="font-bold mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Immediate Action Recommended</h4>
-                        <ul class="list-disc list-inside space-y-1">
-                            <li>Consult with an endocrinologist immediately</li>
-                            <li>Get a comprehensive metabolic panel done</li>
-                            <li>Start monitoring blood glucose daily</li>
-                            <li>Consider dietary changes (reduce carbs and sugar)</li>
-                            <li>Increase physical activity to at least 30 mins/day</li>
-                        </ul>
-                    </div>
-                `;
-            } else if (score >= 6) {
-                level = 'Moderate Risk';
-                className = 'risk-medium';
-                description = 'You show some indicators that warrant attention and lifestyle modifications.';
-                recs = `
-                    <div class="bg-yellow-500 bg-opacity-10 border border-yellow-500 rounded-lg p-4">
-                        <h4 class="font-bold mb-2"><i class="fas fa-lightbulb mr-2"></i>Preventive Measures</h4>
-                        <ul class="list-disc list-inside space-y-1">
-                            <li>Schedule a check-up with your doctor</li>
-                            <li>Monitor your blood glucose periodically</li>
-                            <li>Maintain a healthy diet with whole grains and vegetables</li>
-                            <li>Exercise regularly (150 mins/week recommended)</li>
-                            <li>Manage stress and get adequate sleep</li>
-                        </ul>
-                    </div>
-                `;
-            } else {
-                level = 'Low Risk';
-                className = 'risk-low';
-                description = 'Your current health metrics show low diabetes risk. Keep up the good work!';
-                recs = `
-                    <div class="bg-green-500 bg-opacity-10 border border-green-500 rounded-lg p-4">
-                        <h4 class="font-bold mb-2"><i class="fas fa-check-circle mr-2"></i>Maintenance Tips</h4>
-                        <ul class="list-disc list-inside space-y-1">
-                            <li>Continue your healthy lifestyle habits</li>
-                            <li>Annual health check-ups recommended</li>
-                            <li>Stay physically active</li>
-                            <li>Maintain a balanced diet</li>
-                            <li>Keep stress levels in check</li>
-                        </ul>
-                    </div>
-                `;
-            }
+            let className = 'risk-low';
+            let color = '#10b981';
+            if (level.toLowerCase().includes('high')) { className = 'risk-high'; color = '#ef4444'; }
+            else if (level.toLowerCase().includes('medium') || level.toLowerCase().includes('moderate')) { className = 'risk-medium'; color = '#f59e0b'; }
             
             riskLevel.textContent = level;
             riskLevel.className = `risk-level ${className}`;
-            riskDescription.textContent = description;
-            recommendations.innerHTML = recs;
+            
+            probabilityFill.style.width = `${prob}%`;
+            probabilityFill.style.background = color;
+            probabilityText.textContent = `Risk Probability: ${prob}%`;
+            
+            if (result.bmi) {
+                bmiResult.style.display = 'block';
+                bmiResult.innerHTML = `<strong>Your BMI:</strong> ${result.bmi} (${result.bmi_category || ''})`;
+            }
+            
+            const descriptions = {
+                high: 'Based on your inputs, you show several indicators associated with increased diabetes risk. Please consult a healthcare professional.',
+                medium: 'You show some indicators that warrant attention. Lifestyle modifications are recommended.',
+                low: 'Your current profile shows low diabetes risk. Keep up your healthy habits!'
+            };
+            
+            const recsData = {
+                high: ['Consult an endocrinologist immediately', 'Get a comprehensive metabolic panel', 'Start monitoring blood glucose daily', 'Reduce carbs and sugar intake', 'Exercise at least 30 mins/day'],
+                medium: ['Schedule a check-up with your doctor', 'Monitor blood glucose periodically', 'Maintain a healthy diet', 'Exercise regularly (150 mins/week)', 'Manage stress and sleep well'],
+                low: ['Continue healthy lifestyle', 'Annual health check-ups recommended', 'Stay physically active', 'Maintain balanced diet', 'Keep stress levels low']
+            };
+            
+            const riskKey = result.risk_level || 'low';
+            riskDescription.textContent = descriptions[riskKey] || descriptions.low;
+            
+            const recs = recsData[riskKey] || recsData.low;
+            const recColor = riskKey === 'high' ? 'red' : riskKey === 'medium' ? 'yellow' : 'green';
+            recommendations.innerHTML = `
+                <div class="bg-${recColor}-500 bg-opacity-10 border border-${recColor}-500 rounded-lg p-4">
+                    <h4 class="font-bold mb-2"><i class="fas fa-lightbulb mr-2"></i>Recommendations</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        ${recs.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            apiStatus.textContent = usedAPI ? `Analysis by: ${result.model_type || 'ML'} model (Backend API)` : `Analysis by: Client-side algorithm`;
             
             resultCard.classList.add('show');
             resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     </script>
     
-    <!-- Supabase Modules -->
     <script src="supabase-config.js"></script>
     <script src="auth.js"></script>
     <script src="database.js"></script>
     
-    <!-- Three.js Import Map -->
     <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-        }
-    }
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
     </script>
-    
-    <!-- Ballpit Animation -->
     <script type="module" src="ballpit.js"></script>
 </body>
 </html>
