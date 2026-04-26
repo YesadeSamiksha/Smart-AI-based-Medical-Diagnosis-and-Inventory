@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
         body {
@@ -88,7 +88,7 @@
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.3);
             border-radius: 20px;
-            color: #fca5a5;
+            color: #ffffff;
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 20px;
@@ -97,7 +97,7 @@
 </head>
 <body>
     <!-- Ballpit Background Canvas -->
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="container" style="position: relative; z-index: 1;">
         <div class="row justify-content-center">
@@ -156,14 +156,14 @@
                     <div class="text-center mt-4">
                         <p class="text-gray-400 mb-0">
                             Regular user? 
-                            <a href="login.html" class="text-purple-400 text-decoration-none">User Login</a>
+                            <a href="login.html" class="text-gray-400 text-decoration-none">User Login</a>
                         </p>
                     </div>
                     
                     <!-- Security Notice -->
                     <div class="mt-4 p-3 rounded" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">
                         <small class="text-gray-400 d-flex align-items-start gap-2">
-                            <i class="fas fa-lock mt-1" style="color: #fca5a5;"></i>
+                            <i class="fas fa-lock mt-1" style="color: #ffffff;"></i>
                             <span>This area is restricted to authorized administrators only. All login attempts are monitored and logged.</span>
                         </small>
                     </div>
@@ -301,6 +301,6 @@
     </script>
     
     <!-- Ballpit Animation -->
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

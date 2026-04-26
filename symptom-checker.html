@@ -24,11 +24,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
         body {
-            background: #0a0a0f;
+            background: rgba(10, 10, 10, 0.85);
             color: #ffffff;
             min-height: 100vh;
         }
@@ -69,12 +69,12 @@
         
         .symptom-checkbox:hover {
             background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(139, 92, 246, 0.5);
+            border-color: rgba(200, 200, 200, 0.5);
         }
         
         .symptom-checkbox.selected {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border-color: #cccccc;
         }
         
         .symptom-checkbox input[type="checkbox"] {
@@ -91,22 +91,22 @@
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 12px;
-            color: #8b5cf6;
+            color: #cccccc;
             display: flex;
             align-items: center;
             gap: 10px;
         }
         
         .patient-info-section {
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            background: rgba(200, 200, 200, 0.1);
+            border: 1px solid rgba(200, 200, 200, 0.3);
             border-radius: 16px;
             padding: 24px;
             margin-bottom: 24px;
         }
         
         .patient-info-section h3 {
-            color: #a78bfa;
+            color: #dddddd;
             margin-bottom: 16px;
             font-size: 18px;
         }
@@ -128,7 +128,7 @@
             width: 100%;
             padding: 10px 14px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 8px;
             color: white;
             font-size: 14px;
@@ -136,13 +136,13 @@
         
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
-            border-color: #8b5cf6;
+            border-color: #cccccc;
         }
         
         .btn-analyze {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: linear-gradient(135deg, #cccccc, #ffffff);
             border: none;
             border-radius: 12px;
             color: white;
@@ -155,7 +155,7 @@
         
         .btn-analyze:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            box-shadow: 0 10px 30px rgba(200, 200, 200, 0.3);
         }
         
         .btn-analyze:disabled {
@@ -180,7 +180,7 @@
         
         .custom-symptom-input button {
             padding: 12px 20px;
-            background: #8b5cf6;
+            background: #cccccc;
             border: none;
             border-radius: 10px;
             color: white;
@@ -195,8 +195,8 @@
         }
         
         .custom-symptom-tag {
-            background: rgba(139, 92, 246, 0.3);
-            border: 1px solid #8b5cf6;
+            background: rgba(200, 200, 200, 0.3);
+            border: 1px solid #cccccc;
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 13px;
@@ -233,7 +233,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            background: linear-gradient(135deg, #cccccc, #06b6d4);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
@@ -286,7 +286,7 @@
         
         .chart-container h4 {
             font-size: 14px;
-            color: #a78bfa;
+            color: #dddddd;
             margin-bottom: 16px;
             text-align: center;
         }
@@ -302,7 +302,7 @@
         
         .condition-card:hover {
             background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(139, 92, 246, 0.5);
+            border-color: rgba(200, 200, 200, 0.5);
         }
         
         .condition-header {
@@ -332,7 +332,7 @@
         
         .severity-mild { background: rgba(34, 197, 94, 0.3); color: #86efac; }
         .severity-moderate { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-        .severity-severe { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .severity-severe { background: rgba(239, 68, 68, 0.3); color: #ffffff; }
         
         .recommendations-section {
             background: rgba(6, 182, 212, 0.1);
@@ -372,8 +372,8 @@
         }
         
         .follow-up-questions {
-            background: rgba(168, 85, 247, 0.1);
-            border: 1px solid rgba(168, 85, 247, 0.3);
+            background: rgba(200, 200, 200, 0.1);
+            border: 1px solid rgba(200, 200, 200, 0.3);
             border-radius: 12px;
             padding: 20px;
             margin-top: 16px;
@@ -407,7 +407,7 @@
         
         .confidence-fill {
             height: 100%;
-            background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+            background: linear-gradient(90deg, #cccccc, #06b6d4);
             border-radius: 4px;
             transition: width 0.5s ease;
         }
@@ -423,7 +423,7 @@
         .tab-btn {
             padding: 10px 20px;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 8px;
             color: #9ca3af;
             cursor: pointer;
@@ -431,8 +431,8 @@
         }
         
         .tab-btn.active {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border-color: #cccccc;
             color: white;
         }
         
@@ -447,7 +447,7 @@
 </head>
 <body>
     <!-- Ballpit Background Canvas -->
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="symptom-container" style="position: relative; z-index: 1;">
         <!-- Back Button -->
@@ -459,7 +459,7 @@
         <!-- Main Card -->
         <div class="symptom-card">
             <div class="text-center mb-6">
-                <i class="fas fa-robot text-6xl text-purple-400 mb-4"></i>
+                <i class="fas fa-robot text-6xl text-gray-400 mb-4"></i>
                 <h1 class="text-4xl font-bold mb-2">AI Symptom Analyzer</h1>
                 <p class="text-gray-400">Powered by Gemini AI for accurate symptom analysis</p>
                 <div class="ai-badge mt-3">
@@ -664,7 +664,7 @@
                     <div class="confidence-meter">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-400">AI Confidence Score</span>
-                            <span id="confidenceScore" class="text-purple-400 font-bold">75%</span>
+                            <span id="confidenceScore" class="text-gray-400 font-bold">75%</span>
                         </div>
                         <div class="confidence-bar">
                             <div id="confidenceFill" class="confidence-fill" style="width: 75%"></div>
@@ -1060,7 +1060,7 @@
                 medicinesSection.style.display = 'block';
                 const medicinesList = document.getElementById('medicinesList');
                 medicinesList.innerHTML = result.medicines.map(med => `
-                    <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                    <div style="background: rgba(200, 200, 200,0.1); border: 1px solid rgba(200, 200, 200,0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
                         <h5 style="color: #c4b5fd; font-weight: bold; margin-bottom: 6px;">${med.name || 'Medicine'}</h5>
                         <div style="font-size: 13px; color: #d1d5db;">
                             <div><strong>Dosage:</strong> ${med.dosage || 'As prescribed'}</div>
@@ -1109,7 +1109,7 @@
                     datasets: [{
                         label: 'Probability %',
                         data: conditions.slice(0, 5).map(c => c.probability),
-                        backgroundColor: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe'],
+                        backgroundColor: ['#cccccc', '#dddddd', '#c4b5fd', '#ddd6fe', '#ede9fe'],
                         borderRadius: 8
                     }]
                 },
@@ -1149,7 +1149,7 @@
                     labels: filteredCats.map(([k]) => k),
                     datasets: [{
                         data: filteredCats.map(([_, v]) => v),
-                        backgroundColor: ['#8b5cf6', '#06b6d4', '#22c55e', '#eab308', '#ef4444', '#f97316', '#ec4899', '#6366f1']
+                        backgroundColor: ['#cccccc', '#06b6d4', '#22c55e', '#eab308', '#ef4444', '#f97316', '#999999', '#ffffff']
                     }]
                 },
                 options: {
@@ -1184,6 +1184,6 @@
     </script>
     
     <!-- Ballpit Animation -->
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

@@ -21,10 +21,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
-        body { background: #0a0a0f; color: #ffffff; min-height: 100vh; }
+        body { background: rgba(10, 10, 10, 0.85); color: #ffffff; min-height: 100vh; }
         .diagnosis-container { max-width: 900px; margin: 80px auto 50px; padding: 20px; position: relative; z-index: 10; }
         .diagnosis-card {
             background: rgba(10, 10, 15, 0.95);
@@ -33,20 +33,20 @@
             padding: 40px;
             backdrop-filter: blur(10px);
         }
-        .section-title { color: #6366f1; font-weight: 600; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(99, 102, 241, 0.3); }
+        .section-title { color: #ffffff; font-weight: 600; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
         .form-group { margin-bottom: 20px; }
         .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #e5e7eb; }
         .form-input, .form-select {
             width: 100%;
             padding: 12px 16px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 12px;
             color: #ffffff;
             font-size: 16px;
             transition: all 0.3s ease;
         }
-        .form-input:focus, .form-select:focus { outline: none; border-color: #6366f1; background: rgba(255, 255, 255, 0.08); }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #ffffff; background: rgba(255, 255, 255, 0.08); }
         .form-select option { background: #1a1a2e; color: white; }
         .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
@@ -54,7 +54,7 @@
         .btn-diagnose {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #4ade80, #16a34a);
             border: none;
             border-radius: 12px;
             color: white;
@@ -64,7 +64,7 @@
             transition: all 0.3s ease;
             margin-top: 20px;
         }
-        .btn-diagnose:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); }
+        .btn-diagnose:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3); }
         .btn-diagnose:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .result-card {
             margin-top: 30px;
@@ -80,14 +80,14 @@
         .risk-low { color: #10b981; }
         .risk-medium { color: #f59e0b; }
         .risk-high { color: #ef4444; }
-        .bmi-result { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; margin-top: 20px; }
+        .bmi-result { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; padding: 16px; margin-top: 20px; }
         .probability-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin: 12px 0; }
         .probability-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
         .api-status { font-size: 12px; color: #9ca3af; margin-top: 8px; }
     </style>
 </head>
 <body>
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="diagnosis-container">
         <a href="dashboard.html" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
@@ -561,6 +561,6 @@
     <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
     </script>
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

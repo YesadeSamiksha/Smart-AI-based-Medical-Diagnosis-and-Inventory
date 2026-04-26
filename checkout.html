@@ -19,10 +19,10 @@
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
-        body { background: #0a0a0f; color: white; min-height: 100vh; }
+        body { background: rgba(10, 10, 10, 0.85); color: white; min-height: 100vh; }
         
         .checkout-container {
             max-width: 1000px;
@@ -51,7 +51,7 @@
         }
         
         .section-title i {
-            color: #8b5cf6;
+            color: #cccccc;
         }
         
         .order-item {
@@ -78,19 +78,19 @@
         }
         
         .payment-option:hover {
-            border-color: #8b5cf6;
-            background: rgba(139, 92, 246, 0.1);
+            border-color: #cccccc;
+            background: rgba(200, 200, 200, 0.1);
         }
         
         .payment-option.selected {
-            border-color: #8b5cf6;
-            background: rgba(139, 92, 246, 0.2);
+            border-color: #cccccc;
+            background: rgba(200, 200, 200, 0.2);
         }
         
         .payment-icon {
             width: 50px;
             height: 50px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(200, 200, 200, 0.2);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -137,7 +137,7 @@
         
         .form-control {
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             color: white;
             padding: 12px;
             border-radius: 8px;
@@ -146,13 +146,13 @@
         
         .form-control:focus {
             background: rgba(255, 255, 255, 0.08);
-            border-color: #8b5cf6;
+            border-color: #cccccc;
             outline: none;
         }
     </style>
 </head>
 <body>
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="checkout-container">
         <div class="mb-4">
@@ -162,7 +162,7 @@
         </div>
         
         <h1 class="text-4xl font-bold mb-6">
-            <i class="fas fa-shopping-cart mr-3 text-purple-400"></i>Checkout
+            <i class="fas fa-shopping-cart mr-3 text-gray-400"></i>Checkout
         </h1>
         
         <div class="row">
@@ -386,7 +386,7 @@
                         contact: document.getElementById('phone').value
                     },
                     theme: {
-                        color: '#8b5cf6'
+                        color: '#cccccc'
                     },
                     modal: {
                         ondismiss: function() {
@@ -499,6 +499,6 @@
         }
     }
     </script>
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

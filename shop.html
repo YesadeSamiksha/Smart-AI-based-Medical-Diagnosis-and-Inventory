@@ -18,10 +18,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
-        body { background: #0a0a0f; color: white; min-height: 100vh; }
+        body { background: rgba(10, 10, 10, 0.85); color: white; min-height: 100vh; }
         
         .shop-container { max-width: 1400px; margin: 100px auto 50px; padding: 20px; position: relative; z-index: 10; }
         
@@ -44,20 +44,20 @@
         .category-pill {
             padding: 10px 20px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         
         .category-pill:hover {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border-color: #cccccc;
         }
         
         .category-pill.active {
-            background: rgba(139, 92, 246, 0.3);
-            border-color: #8b5cf6;
+            background: rgba(200, 200, 200, 0.3);
+            border-color: #cccccc;
             color: white;
         }
         
@@ -78,14 +78,14 @@
         
         .product-card:hover {
             transform: translateY(-5px);
-            border-color: rgba(139, 92, 246, 0.5);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            border-color: rgba(200, 200, 200, 0.5);
+            box-shadow: 0 10px 30px rgba(200, 200, 200, 0.3);
         }
         
         .product-image {
             width: 100%;
             height: 180px;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2));
+            background: linear-gradient(135deg, rgba(200, 200, 200, 0.2), rgba(74, 222, 128, 0.15));
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -139,11 +139,11 @@
         
         .stock-ok { background: rgba(34, 197, 94, 0.3); color: #86efac; }
         .stock-low { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-        .stock-out { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .stock-out { background: rgba(239, 68, 68, 0.3); color: #ffffff; }
         
         .btn-add-cart {
             padding: 10px 20px;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: linear-gradient(135deg, #cccccc, #ffffff);
             border: none;
             border-radius: 10px;
             color: white;
@@ -156,7 +156,7 @@
         
         .btn-add-cart:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 10px 20px rgba(200, 200, 200, 0.4);
         }
         
         .btn-add-cart:disabled {
@@ -170,14 +170,14 @@
             right: 32px;
             width: 60px;
             height: 60px;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: linear-gradient(135deg, #cccccc, #ffffff);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+            box-shadow: 0 10px 30px rgba(200, 200, 200, 0.5);
             transition: all 0.3s ease;
             z-index: 100;
         }
@@ -210,7 +210,7 @@
             height: 100vh;
             background: rgba(20, 20, 30, 0.98);
             backdrop-filter: blur(20px);
-            border-left: 1px solid rgba(139, 92, 246, 0.3);
+            border-left: 1px solid rgba(200, 200, 200, 0.3);
             padding: 24px;
             transition: right 0.3s ease;
             z-index: 200;
@@ -233,7 +233,7 @@
         .cart-item-image {
             width: 60px;
             height: 60px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(200, 200, 200, 0.2);
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -255,8 +255,8 @@
         .qty-btn {
             width: 28px;
             height: 28px;
-            background: rgba(139, 92, 246, 0.3);
-            border: 1px solid #8b5cf6;
+            background: rgba(200, 200, 200, 0.3);
+            border: 1px solid #cccccc;
             border-radius: 6px;
             color: white;
             cursor: pointer;
@@ -266,12 +266,12 @@
         }
         
         .qty-btn:hover {
-            background: #8b5cf6;
+            background: #cccccc;
         }
         
         .cart-total {
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border: 1px solid #cccccc;
             border-radius: 12px;
             padding: 20px;
             margin-top: 24px;
@@ -310,7 +310,7 @@
     </style>
 </head>
 <body>
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="shop-container">
         <!-- Header -->
@@ -321,7 +321,7 @@
                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </a>
                     <h1 class="text-4xl font-bold mb-2">
-                        <i class="fas fa-shopping-bag mr-3 text-purple-400"></i>Medical Shop
+                        <i class="fas fa-shopping-bag mr-3 text-gray-400"></i>Medical Shop
                     </h1>
                     <p class="text-gray-400">Browse and purchase medical supplies & medications</p>
                 </div>
@@ -351,7 +351,7 @@
         <!-- Products Grid -->
         <div id="productsGrid" class="products-grid">
             <div class="col-span-full text-center py-12">
-                <i class="fas fa-spinner fa-spin text-4xl text-purple-400 mb-4"></i>
+                <i class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
                 <p class="text-gray-400">Loading products...</p>
             </div>
         </div>
@@ -707,6 +707,6 @@
         }
     }
     </script>
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

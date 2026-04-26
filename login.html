@@ -31,7 +31,7 @@
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <!-- Three.js Import Map - MUST be in head before any module scripts -->
     <script type="importmap">
@@ -49,7 +49,7 @@
         * { font-family: 'Inter', sans-serif; }
 
         body {
-            background: #0a0a0f;
+            background: rgba(10, 10, 10, 0.85);
             min-height: 100vh;
             margin: 0;
             padding: 0;
@@ -77,7 +77,7 @@
             box-shadow:
                 0 8px 48px rgba(0, 0, 0, 0.5),
                 0 1px 0 rgba(255,255,255,0.06) inset,
-                0 0 0 1px rgba(99,102,241,0.08);
+                0 0 0 1px rgba(255, 255, 255,0.08);
             position: relative;
         }
 
@@ -103,10 +103,10 @@
         }
         
         .form-control:focus {
-            background: rgba(99, 102, 241, 0.08);
-            border-color: rgba(99, 102, 241, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.5);
             color: white;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
         }
         
         .form-control::placeholder {
@@ -114,19 +114,19 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #4ade80, #16a34a);
             border: none;
             padding: 0.8rem;
             border-radius: 12px;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.35);
             letter-spacing: 0.3px;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 0 30px rgba(99, 102, 241, 0.55), 0 4px 16px rgba(0,0,0,0.3);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.55), 0 4px 16px rgba(0,0,0,0.3);
             filter: brightness(1.1);
         }
 
@@ -149,7 +149,7 @@
         
         .tab-button.active {
             color: white;
-            border-bottom-color: #6366f1;
+            border-bottom-color: #ffffff;
             font-weight: 600;
         }
 
@@ -175,7 +175,7 @@
         
         .social-btn:hover {
             background: rgba(255, 255, 255, 0.09);
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(74, 222, 128, 0.15);
             color: white;
             transform: translateY(-1px);
         }
@@ -215,8 +215,8 @@
             background: rgba(10, 10, 20, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(99, 102, 241, 0.4);
-            box-shadow: 0 0 18px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 18px rgba(255, 255, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.08);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -230,8 +230,8 @@
         .pill-logo:hover {
             transform: scale(1.12) rotate(-5deg);
             color: #ffffff;
-            border-color: rgba(139, 92, 246, 0.7);
-            box-shadow: 0 0 28px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+            border-color: rgba(200, 200, 200, 0.7);
+            box-shadow: 0 0 28px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255,255,255,0.12);
         }
 
         .pill-nav-items {
@@ -255,7 +255,7 @@
             left: 12px;
             right: 12px;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(165,180,252,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.3), transparent);
             border-radius: 9999px;
         }
 
@@ -297,8 +297,8 @@
 
         .pill.is-active {
             color: #ffffff;
-            background: rgba(99, 102, 241, 0.2);
-            box-shadow: inset 0 0 0 1px rgba(99,102,241,0.3);
+            background: rgba(74, 222, 128, 0.15);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255,0.3);
         }
 
         .pill-auth {
@@ -323,32 +323,32 @@
             left: 12px;
             right: 12px;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(165,180,252,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.3), transparent);
             border-radius: 9999px;
         }
 
         .pill-auth .pill { font-size: 13px; }
 
         .pill-auth .pill.signup {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
             color: white;
             font-weight: 600;
             letter-spacing: 0.4px;
             padding: 0 20px;
-            box-shadow: 0 0 20px rgba(99,102,241,0.4), 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4), 0 2px 8px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
         }
 
         .pill-auth .pill.signup:hover {
             transform: translateY(-1px);
-            box-shadow: 0 0 30px rgba(99,102,241,0.6), 0 4px 16px rgba(0,0,0,0.4);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.6), 0 4px 16px rgba(0,0,0,0.4);
             filter: brightness(1.1);
         }
 
         .pill-auth .pill.login-active {
-            background: rgba(99,102,241,0.15);
+            background: rgba(255, 255, 255,0.15);
             color: white;
-            box-shadow: inset 0 0 0 1px rgba(99,102,241,0.3);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255,0.3);
         }
 
         @media (max-width: 640px) {
@@ -359,7 +359,7 @@
 </head>
 <body>
     <!-- Ballpit Background Canvas -->
-    <canvas id="ballpitCanvas"></canvas>
+    
 
     <!-- Glassmorphism Navbar -->
     <div class="pill-nav-container">
@@ -387,7 +387,7 @@
         <!-- Logo -->
         <div class="text-center mb-4">
             <a href="index.html" class="text-white text-decoration-none">
-                <i class="fas fa-heartbeat text-4xl" style="color: #6366f1;"></i>
+                <i class="fas fa-heartbeat text-4xl" style="color: #ffffff;"></i>
                 <h2 class="mt-2">MedAI</h2>
             </a>
         </div>
@@ -419,7 +419,7 @@
                         Remember me
                     </label>
                 </div>
-                <a href="#" class="text-decoration-none" style="color: #6366f1;">Forgot Password?</a>
+                <a href="#" class="text-decoration-none" style="color: #ffffff;">Forgot Password?</a>
             </div>
             
             <button type="submit" class="btn btn-primary w-100 mb-3">
@@ -471,7 +471,7 @@
             <div class="form-check mb-4">
                 <input class="form-check-input" type="checkbox" id="terms" required>
                 <label class="form-check-label text-white-50" for="terms">
-                    I agree to the <a href="#" style="color: #6366f1;">Terms & Conditions</a>
+                    I agree to the <a href="#" style="color: #ffffff;">Terms & Conditions</a>
                 </label>
             </div>
             
@@ -673,6 +673,6 @@
     </script>
     
     <!-- Ballpit Animation -->
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

@@ -24,11 +24,11 @@
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
         body {
-            background: #0a0a0f;
+            background: rgba(10, 10, 10, 0.85);
             color: #ffffff;
             min-height: 100vh;
         }
@@ -62,7 +62,7 @@
             width: 100%;
             padding: 12px 16px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 12px;
             color: #ffffff;
             font-size: 16px;
@@ -145,7 +145,7 @@
         }
         
         .cat-normal { color: #10b981; }
-        .cat-elevated { color: #fbbf24; }
+        .cat-elevated { color: #4ade80; }
         .cat-hypertension1 { color: #f59e0b; }
         .cat-hypertension2 { color: #ef4444; }
         .cat-crisis { color: #dc2626; animation: pulse 2s infinite; }
@@ -164,7 +164,7 @@
 </head>
 <body>
     <!-- Ballpit Background Canvas -->
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="diagnosis-container" style="position: relative; z-index: 1;">
         <!-- Back Button -->
@@ -608,6 +608,6 @@
     </script>
     
     <!-- Ballpit Animation -->
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

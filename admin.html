@@ -24,11 +24,11 @@
     <link rel="stylesheet" href="styles.css">
     
     <!-- Ballpit Background -->
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
         body {
-            background: #0a0a0f;
+            background: rgba(10, 10, 10, 0.85);
             color: #ffffff;
             min-height: 100vh;
         }
@@ -57,7 +57,7 @@
         
         .admin-card:hover {
             transform: translateY(-4px);
-            border-color: rgba(139, 92, 246, 0.5);
+            border-color: rgba(200, 200, 200, 0.5);
         }
         
         .stat-big {
@@ -112,8 +112,8 @@
         
         .quick-action-btn {
             padding: 20px;
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            background: rgba(200, 200, 200, 0.1);
+            border: 1px solid rgba(200, 200, 200, 0.3);
             border-radius: 12px;
             color: white;
             text-decoration: none;
@@ -125,20 +125,20 @@
         }
         
         .quick-action-btn:hover {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(200, 200, 200, 0.2);
             transform: translateY(-2px);
             color: white;
         }
         
         .quick-action-btn i {
             font-size: 32px;
-            color: #8b5cf6;
+            color: #cccccc;
         }
     </style>
 </head>
 <body>
     <!-- Ballpit Background Canvas -->
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <div class="admin-container" style="position: relative; z-index: 1;">
         <!-- Header -->
@@ -147,7 +147,7 @@
                 <h1 class="text-4xl font-bold mb-2">Admin Dashboard</h1>
                 <p class="text-gray-400">Monitor and manage MedAI platform</p>
             </div>
-            <a href="dashboard.html" class="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-full transition-colors">
+            <a href="dashboard.html" class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-full transition-colors">
                 <i class="fas fa-home"></i>
                 <span>User Dashboard</span>
             </a>
@@ -156,7 +156,7 @@
         <!-- Stats Grid -->
         <div class="admin-grid">
             <div class="admin-card">
-                <div class="stat-big text-blue-400" id="totalUsers">0</div>
+                <div class="stat-big text-gray-400" id="totalUsers">0</div>
                 <div class="stat-label">Total Users</div>
                 <div class="mt-2 text-sm text-gray-400">
                     Registered users
@@ -164,7 +164,7 @@
             </div>
             
             <div class="admin-card">
-                <div class="stat-big text-purple-400" id="totalDiagnosis">0</div>
+                <div class="stat-big text-gray-400" id="totalDiagnosis">0</div>
                 <div class="stat-label">Diagnoses Completed</div>
                 <div class="mt-2 text-sm text-gray-400">
                     All time
@@ -353,20 +353,20 @@
                     datasets: [{
                         label: 'Diabetes Tests',
                         data: [65, 78, 90, 81, 95, 102, 88],
-                        borderColor: '#f9a8d4',
-                        backgroundColor: 'rgba(249, 168, 212, 0.1)',
+                        borderColor: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
                         tension: 0.4
                     }, {
                         label: 'Lung Scans',
                         data: [45, 52, 48, 63, 70, 68, 75],
-                        borderColor: '#93c5fd',
-                        backgroundColor: 'rgba(147, 197, 253, 0.1)',
+                        borderColor: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
                         tension: 0.4
                     }, {
                         label: 'BP Checks',
                         data: [85, 92, 88, 95, 110, 105, 98],
-                        borderColor: '#fca5a5',
-                        backgroundColor: 'rgba(252, 165, 165, 0.1)',
+                        borderColor: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
                         tension: 0.4
                     }]
                 },
@@ -426,6 +426,6 @@
     </script>
     
     <!-- Ballpit Animation -->
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>

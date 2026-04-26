@@ -26,10 +26,10 @@
     <script src="trends-analysis.js"></script>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="ballpit.css">
+    <link rel="stylesheet" href="shapegrid.css">
     
     <style>
-        body { background: #0a0a0f; color: #ffffff; min-height: 100vh; }
+        body { background: rgba(10, 10, 10, 0.85); color: #ffffff; min-height: 100vh; }
         
         /* Login Modal */
         .login-overlay {
@@ -44,7 +44,7 @@
         
         .login-card {
             background: rgba(30, 30, 40, 0.95);
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            border: 1px solid rgba(200, 200, 200, 0.3);
             border-radius: 24px;
             padding: 48px;
             max-width: 420px;
@@ -62,7 +62,7 @@
             width: 100%;
             padding: 14px 18px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 12px;
             color: white;
             font-size: 15px;
@@ -71,13 +71,13 @@
         
         .login-input:focus {
             outline: none;
-            border-color: #8b5cf6;
+            border-color: #cccccc;
         }
         
         .login-btn {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: linear-gradient(135deg, #cccccc, #ffffff);
             border: none;
             border-radius: 12px;
             color: white;
@@ -87,7 +87,7 @@
             transition: all 0.3s ease;
         }
         
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3); }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(200, 200, 200, 0.3); }
         .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .login-error {
@@ -95,7 +95,7 @@
             border: 1px solid #ef4444;
             padding: 12px;
             border-radius: 8px;
-            color: #fca5a5;
+            color: #ffffff;
             margin-bottom: 16px;
             display: none;
         }
@@ -136,9 +136,9 @@
         }
         
         .users-table th {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(200, 200, 200, 0.2);
             font-weight: 600;
-            color: #a78bfa;
+            color: #dddddd;
         }
         
         .users-table tr:hover {
@@ -147,16 +147,16 @@
         
         .view-btn {
             padding: 6px 14px;
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border: 1px solid #cccccc;
             border-radius: 8px;
-            color: #a78bfa;
+            color: #dddddd;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         
         .view-btn:hover {
-            background: #8b5cf6;
+            background: #cccccc;
             color: white;
         }
         
@@ -173,7 +173,7 @@
         
         .modal-content {
             background: rgba(20, 20, 30, 0.98);
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            border: 1px solid rgba(200, 200, 200, 0.3);
             border-radius: 20px;
             padding: 32px;
             max-width: 800px;
@@ -223,20 +223,20 @@
         
         .risk-low { background: rgba(34, 197, 94, 0.3); color: #86efac; }
         .risk-medium { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-        .risk-high { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .risk-high { background: rgba(239, 68, 68, 0.3); color: #ffffff; }
         
         .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
         .tab-btn {
             padding: 10px 20px;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 8px;
             color: #9ca3af;
             cursor: pointer;
         }
         .tab-btn.active {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border-color: #cccccc;
             color: white;
         }
         .tab-content { display: none; }
@@ -254,7 +254,7 @@
             background: rgba(239, 68, 68, 0.2);
             border: 1px solid #ef4444;
             border-radius: 10px;
-            color: #fca5a5;
+            color: #ffffff;
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -268,7 +268,7 @@
         .admin-tab-btn {
             padding: 12px 24px;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
             border-radius: 10px;
             color: #9ca3af;
             cursor: pointer;
@@ -276,13 +276,13 @@
         }
         
         .admin-tab-btn:hover {
-            background: rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(200, 200, 200, 0.1);
+            border-color: rgba(200, 200, 200, 0.3);
         }
         
         .admin-tab-btn.active {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
+            background: rgba(200, 200, 200, 0.2);
+            border-color: #cccccc;
             color: white;
         }
         
@@ -304,7 +304,7 @@
         
         .stock-ok { background: rgba(34, 197, 94, 0.3); color: #86efac; }
         .stock-low { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-        .stock-out { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .stock-out { background: rgba(239, 68, 68, 0.3); color: #ffffff; }
         
         .action-btn {
             padding: 6px 12px;
@@ -316,7 +316,7 @@
         
         .btn-edit {
             background: rgba(59, 130, 246, 0.2);
-            color: #93c5fd;
+            color: #ffffff;
         }
         
         .btn-edit:hover {
@@ -325,7 +325,7 @@
         
         .btn-delete {
             background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
+            color: #ffffff;
         }
         
         .btn-delete:hover {
@@ -342,12 +342,12 @@
             position: relative;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.15);
         }
         
         .toggle-checkbox:checked {
-            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-            border-color: #8b5cf6;
+            background: linear-gradient(135deg, #cccccc, #3b82f6);
+            border-color: #cccccc;
         }
         
         .toggle-checkbox::before {
@@ -389,7 +389,7 @@
         
         .btn-edit {
             background: rgba(59, 130, 246, 0.2);
-            color: #93c5fd;
+            color: #ffffff;
         }
         
         .btn-edit:hover {
@@ -399,7 +399,7 @@
         
         .btn-delete {
             background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
+            color: #ffffff;
         }
         
         .btn-delete:hover {
@@ -409,12 +409,12 @@
     </style>
 </head>
 <body>
-    <canvas id="ballpitCanvas"></canvas>
+    
     
     <!-- Login Overlay - Shown only while verifying token -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card text-center">
-            <i class="fas fa-spinner fa-spin text-5xl text-purple-400 mb-4"></i>
+            <i class="fas fa-spinner fa-spin text-5xl text-gray-400 mb-4"></i>
             <h2>Verifying Access</h2>
             <p class="text-gray-400">Please wait...</p>
         </div>
@@ -463,11 +463,11 @@
             <!-- Stats Grid -->
             <div class="admin-grid">
                 <div class="admin-card">
-                    <div class="stat-big text-blue-400" id="totalUsers">0</div>
+                    <div class="stat-big text-gray-400" id="totalUsers">0</div>
                     <div class="stat-label">Total Users</div>
                 </div>
                 <div class="admin-card">
-                    <div class="stat-big text-purple-400" id="totalDiagnoses">0</div>
+                    <div class="stat-big text-gray-400" id="totalDiagnoses">0</div>
                     <div class="stat-label">Total Diagnoses</div>
                 </div>
                 <div class="admin-card">
@@ -502,15 +502,15 @@
             <!-- User Analytics Cards -->
             <div class="admin-grid mb-6">
                 <div class="admin-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));">
-                    <div class="stat-big text-blue-400" id="usersTotalCount">0</div>
+                    <div class="stat-big text-gray-400" id="usersTotalCount">0</div>
                     <div class="stat-label">Registered Users</div>
                 </div>
                 <div class="admin-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));">
                     <div class="stat-big text-green-400" id="usersActiveToday">0</div>
                     <div class="stat-label">Active Today</div>
                 </div>
-                <div class="admin-card" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05));">
-                    <div class="stat-big text-purple-400" id="usersWithAssessments">0</div>
+                <div class="admin-card" style="background: linear-gradient(135deg, rgba(200, 200, 200, 0.1), rgba(200, 200, 200, 0.05));">
+                    <div class="stat-big text-gray-400" id="usersWithAssessments">0</div>
                     <div class="stat-label">Users with Assessments</div>
                 </div>
                 <div class="admin-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));">
@@ -521,7 +521,7 @@
             
             <!-- User Activity Chart -->
             <div class="admin-card mb-6">
-                <h3 class="text-xl font-bold mb-4"><i class="fas fa-chart-area mr-2 text-purple-400"></i>User Activity (Last 7 Days)</h3>
+                <h3 class="text-xl font-bold mb-4"><i class="fas fa-chart-area mr-2 text-gray-400"></i>User Activity (Last 7 Days)</h3>
                 <div class="chart-container" style="height: 200px;">
                     <canvas id="userActivityChart"></canvas>
                 </div>
@@ -529,7 +529,7 @@
             
             <div class="admin-card">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold"><i class="fas fa-users mr-2 text-purple-400"></i>User Management</h3>
+                    <h3 class="text-2xl font-bold"><i class="fas fa-users mr-2 text-gray-400"></i>User Management</h3>
                     <div class="flex gap-3">
                         <input type="text" id="userSearch" placeholder="Search users..." 
                                class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white"
@@ -541,7 +541,7 @@
                             <option value="low">Low Risk</option>
                             <option value="none">No Assessments</option>
                         </select>
-                        <button onclick="loadUsers()" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700">
+                        <button onclick="loadUsers()" class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-900">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                         <button onclick="exportUsersCSV()" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700" title="Export to CSV">
@@ -579,7 +579,7 @@
         <div id="section-orders" class="admin-section">
             <div class="admin-card">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold"><i class="fas fa-shopping-cart mr-3 text-blue-400"></i>Customer Orders</h3>
+                    <h3 class="text-2xl font-bold"><i class="fas fa-shopping-cart mr-3 text-gray-400"></i>Customer Orders</h3>
                     <div class="flex gap-3">
                         <select id="orderStatusFilter" class="px-4 py-2 bg-transparent border border-gray-600 rounded-lg text-white" onchange="filterOrders(this.value)">
                             <option value="all">All Orders</option>
@@ -597,7 +597,7 @@
                 <!-- Order Stats -->
                 <div class="grid grid-cols-4 gap-4 mb-6">
                     <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <div class="text-2xl font-bold text-blue-400" id="ordersTotal">0</div>
+                        <div class="text-2xl font-bold text-gray-400" id="ordersTotal">0</div>
                         <div class="text-sm text-gray-400">Total Orders</div>
                     </div>
                     <div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
@@ -608,8 +608,8 @@
                         <div class="text-2xl font-bold text-green-400" id="ordersDelivered">0</div>
                         <div class="text-sm text-gray-400">Delivered</div>
                     </div>
-                    <div class="p-4 rounded-lg" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
-                        <div class="text-2xl font-bold text-purple-400" id="ordersRevenue">₹0</div>
+                    <div class="p-4 rounded-lg" style="background: rgba(200, 200, 200, 0.1); border: 1px solid rgba(200, 200, 200, 0.3);">
+                        <div class="text-2xl font-bold text-gray-400" id="ordersRevenue">₹0</div>
                         <div class="text-sm text-gray-400">Total Revenue</div>
                     </div>
                 </div>
@@ -644,10 +644,10 @@
         <!-- Inventory Section -->
         <div id="section-inventory" class="admin-section">
             <!-- AI Agent Control Panel -->
-            <div class="admin-card mb-6" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
+            <div class="admin-card mb-6" style="background: linear-gradient(135deg, rgba(200, 200, 200, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(200, 200, 200, 0.3);">
                 <div class="flex justify-between items-center mb-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-r from-gray-800 to-blue-600 flex items-center justify-center">
                             <i class="fas fa-robot text-white text-xl"></i>
                         </div>
                         <div>
@@ -660,7 +660,7 @@
                             <span class="text-sm text-gray-400">Auto-Reorder</span>
                             <input type="checkbox" id="aiAgentToggle" class="toggle-checkbox" onchange="toggleAIAgent(this.checked)">
                         </label>
-                        <button onclick="runAIAgent()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                        <button onclick="runAIAgent()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">
                             <i class="fas fa-sync-alt mr-2"></i>Run Now
                         </button>
                     </div>
@@ -669,7 +669,7 @@
                 <!-- AI Agent Stats -->
                 <div class="grid grid-cols-4 gap-4 mb-4">
                     <div class="p-3 rounded-lg bg-black bg-opacity-30">
-                        <div class="text-xl font-bold text-blue-400" id="aiItemsMonitored">0</div>
+                        <div class="text-xl font-bold text-gray-400" id="aiItemsMonitored">0</div>
                         <div class="text-xs text-gray-400">Items Monitored</div>
                     </div>
                     <div class="p-3 rounded-lg bg-black bg-opacity-30">
@@ -681,7 +681,7 @@
                         <div class="text-xs text-gray-400">Auto Orders</div>
                     </div>
                     <div class="p-3 rounded-lg bg-black bg-opacity-30">
-                        <div class="text-xl font-bold text-purple-400" id="aiLastCheck">Never</div>
+                        <div class="text-xl font-bold text-gray-400" id="aiLastCheck">Never</div>
                         <div class="text-xs text-gray-400">Last Check</div>
                     </div>
                 </div>
@@ -697,7 +697,7 @@
             
             <div class="admin-card mb-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold"><i class="fas fa-boxes mr-3 text-purple-400"></i>Inventory Management</h3>
+                    <h3 class="text-2xl font-bold"><i class="fas fa-boxes mr-3 text-gray-400"></i>Inventory Management</h3>
                     <button onclick="openAddItemModal()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
                         <i class="fas fa-plus mr-2"></i>Add New Item
                     </button>
@@ -710,7 +710,7 @@
                         <div class="text-sm text-gray-400">Total Items</div>
                     </div>
                     <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <div class="text-2xl font-bold text-blue-400" id="invTotalStock">0</div>
+                        <div class="text-2xl font-bold text-gray-400" id="invTotalStock">0</div>
                         <div class="text-sm text-gray-400">Total Stock</div>
                     </div>
                     <div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
@@ -750,7 +750,7 @@
             <!-- AI Activity Log -->
             <div class="admin-card">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold"><i class="fas fa-list mr-2 text-blue-400"></i>AI Agent Activity Log</h3>
+                    <h3 class="text-xl font-bold"><i class="fas fa-list mr-2 text-gray-400"></i>AI Agent Activity Log</h3>
                     <button onclick="loadAIActivityLog()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
                         <i class="fas fa-sync-alt mr-1"></i>Refresh
                     </button>
@@ -819,7 +819,7 @@
                     <button type="button" onclick="closeItemModal()" class="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                    <button type="submit" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">
                         <i class="fas fa-save mr-2"></i>Save Item
                     </button>
                 </div>
@@ -881,8 +881,8 @@
                     <div class="stat-big text-red-400" id="trend-high-risk">0</div>
                     <div class="stat-label">High Risk Cases</div>
                 </div>
-                <div class="admin-card" style="background: linear-gradient(135deg,rgba(168,85,247,.12),rgba(168,85,247,.04));">
-                    <div class="stat-big text-purple-400" id="trend-dominant-disease">—</div>
+                <div class="admin-card" style="background: linear-gradient(135deg,rgba(200, 200, 200,.12),rgba(200, 200, 200,.04));">
+                    <div class="stat-big text-gray-400" id="trend-dominant-disease">—</div>
                     <div class="stat-label">Most Common Condition</div>
                 </div>
                 <div class="admin-card" style="background: linear-gradient(135deg,rgba(34,197,94,.12),rgba(34,197,94,.04));">
@@ -900,7 +900,7 @@
                     </div>
                 </div>
                 <div class="admin-card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-list mr-2 text-purple-400"></i>Top Conditions Breakdown</h3>
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-list mr-2 text-gray-400"></i>Top Conditions Breakdown</h3>
                     <div id="commonConditionsList" style="max-height: 280px; overflow-y: auto;">
                         <p class="text-gray-400 text-sm text-center py-4">Loading condition data from database...</p>
                     </div>
@@ -932,7 +932,7 @@
                     </div>
                 </div>
                 <div class="admin-card">
-                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-calendar-alt mr-2 text-blue-400"></i>Monthly Diagnosis Trend (Last 6 Months)</h3>
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-calendar-alt mr-2 text-gray-400"></i>Monthly Diagnosis Trend (Last 6 Months)</h3>
                     <div class="chart-container" style="height:220px;">
                         <canvas id="trendMonthlyChart"></canvas>
                     </div>
@@ -956,8 +956,8 @@
             </div>
 
             <!-- AI Insights -->
-            <div class="admin-card" style="background: linear-gradient(135deg,rgba(139,92,246,.08),rgba(6,182,212,.06));border:1px solid rgba(139,92,246,.3);">
-                <h3 class="text-lg font-bold mb-4"><i class="fas fa-robot mr-2 text-purple-400"></i>AI-Generated Insights & Recommendations</h3>
+            <div class="admin-card" style="background: linear-gradient(135deg,rgba(200, 200, 200,.08),rgba(6,182,212,.06));border:1px solid rgba(200, 200, 200,.3);">
+                <h3 class="text-lg font-bold mb-4"><i class="fas fa-robot mr-2 text-gray-400"></i>AI-Generated Insights & Recommendations</h3>
                 <div id="aiInsightsList" class="space-y-3">
                     <div class="text-gray-400 text-sm">Analyzing data...</div>
                 </div>
@@ -966,7 +966,7 @@
 
         <!-- User Activity Deep Dive -->
         <div class="admin-card">
-            <h3 class="text-xl font-bold mb-4"><i class="fas fa-activity mr-2 text-blue-400"></i>User Activity Analysis</h3>
+            <h3 class="text-xl font-bold mb-4"><i class="fas fa-activity mr-2 text-gray-400"></i>User Activity Analysis</h3>
             <div class="admin-grid mb-4" style="grid-template-columns:1fr 1fr;">
                 <div class="chart-container" style="height:200px;">
                     <canvas id="trendActivityChart"></canvas>
@@ -1303,7 +1303,7 @@
                     </td>
                     <td class="py-3 px-4 text-gray-400 text-sm">${formatDate(order.created_at)}</td>
                     <td class="py-3 px-4">
-                        <button onclick="viewOrder('${order.id}')" class="text-purple-400 hover:text-purple-300">
+                        <button onclick="viewOrder('${order.id}')" class="text-gray-400 hover:text-purple-300">
                             <i class="fas fa-eye"></i>
                         </button>
                     </td>
@@ -1515,7 +1515,7 @@
                         datasets: [{
                             label: 'Count',
                             data: typeValues,
-                            backgroundColor: ['#f9a8d4', '#93c5fd', '#fca5a5', '#a78bfa'],
+                            backgroundColor: ['#ffffff', '#ffffff', '#ffffff', '#dddddd'],
                             borderRadius: 4
                         }]
                     },
@@ -1561,7 +1561,7 @@
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-8">
-                        <i class="fas fa-spinner fa-spin mr-2 text-blue-400"></i>
+                        <i class="fas fa-spinner fa-spin mr-2 text-gray-400"></i>
                         Loading users...
                     </td>
                 </tr>`;
@@ -1941,12 +1941,12 @@
                     datasets: [{
                         label: 'Assessments',
                         data: values,
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        borderColor: '#cccccc',
+                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
                         fill: true,
                         tension: 0.4,
                         pointRadius: 4,
-                        pointBackgroundColor: '#8b5cf6'
+                        pointBackgroundColor: '#cccccc'
                     }]
                 },
                 options: {
@@ -1989,14 +1989,14 @@
                     .join(' ') || '<span class="text-gray-500">No assessments</span>';
                 
                 const roleBadge = user.role === 'admin' 
-                    ? '<span class="text-xs bg-purple-600 px-2 py-0.5 rounded ml-2">Admin</span>' 
+                    ? '<span class="text-xs bg-gray-800 px-2 py-0.5 rounded ml-2">Admin</span>' 
                     : '';
                 
                 return `
                     <tr data-user-id="${user.id}" data-risk="${user.max_risk}">
                         <td>
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-white font-bold">
                                     ${(user.full_name || user.email || '?').charAt(0).toUpperCase()}
                                 </div>
                                 <span>${user.full_name || 'Unknown'}${roleBadge}</span>
@@ -2099,7 +2099,7 @@
                 const userName = userInfo.full_name || userInfo.email || `User ${userId.substring(0, 8)}`;
                 document.getElementById('modalUserName').innerHTML = `
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                        <div class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center text-white font-bold text-xl">
                             ${userName.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -2152,11 +2152,11 @@
                 
                 document.getElementById('trendsSummary').innerHTML = `
                     <div class="trend-card">
-                        <div class="trend-value text-blue-400">${trends.total_assessments || 0}</div>
+                        <div class="trend-value text-gray-400">${trends.total_assessments || 0}</div>
                         <div class="trend-label">Total Assessments</div>
                     </div>
                     <div class="trend-card">
-                        <div class="trend-value text-purple-400">${trends.most_common || 'N/A'}</div>
+                        <div class="trend-value text-gray-400">${trends.most_common || 'N/A'}</div>
                         <div class="trend-label">Most Common</div>
                     </div>
                     <div class="trend-card">
@@ -2217,8 +2217,8 @@
                     datasets: [{
                         label: 'Risk Level',
                         data: values.reverse(),
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        borderColor: '#cccccc',
+                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
                         fill: true,
                         tension: 0.4
                     }]
@@ -2551,7 +2551,7 @@
             
             chartEl.innerHTML = '';
             try {
-                const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+                const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#cccccc'];
                 const datasets = [];
                 
                 data.trends.slice(0, 5).forEach((trend, index) => {
@@ -2631,7 +2631,7 @@
                                 'rgba(16, 185, 129, 0.8)',
                                 'rgba(245, 158, 11, 0.8)',
                                 'rgba(239, 68, 68, 0.8)',
-                                'rgba(139, 92, 246, 0.8)'
+                                'rgba(200, 200, 200, 0.8)'
                             ],
                             borderColor: '#1e293b',
                             borderWidth: 1
@@ -2712,7 +2712,7 @@
                             labels: Object.keys(typeCounts).map(k => diseaseLabels[k] || k),
                             datasets: [{
                                 data: Object.values(typeCounts),
-                                backgroundColor: ['#3b82f6','#8b5cf6','#ef4444','#06b6d4'],
+                                backgroundColor: ['#3b82f6','#cccccc','#ef4444','#06b6d4'],
                                 borderColor: 'rgba(0,0,0,0.3)', borderWidth: 2
                             }]
                         },
@@ -2811,7 +2811,7 @@
                     insightsList.innerHTML = '<div class="text-center text-gray-400 py-4 text-sm">Insights will appear after users complete health assessments.</div>';
                 } else {
                     insightsList.innerHTML = safeInsights.map(ins => `
-                        <div class="flex gap-3 p-3 rounded-lg" style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);">
+                        <div class="flex gap-3 p-3 rounded-lg" style="background:rgba(200, 200, 200,0.08);border:1px solid rgba(200, 200, 200,0.2);">
                             <div class="text-2xl flex-shrink-0">${ins.icon}</div>
                             <div>
                                 <div class="font-semibold text-sm text-purple-300">${ins.title}</div>
@@ -2867,11 +2867,11 @@
                     <div class="text-sm font-semibold text-gray-300 mb-2">Platform Summary</div>
                     <div class="flex justify-between text-xs py-1 border-b border-gray-700">
                         <span class="text-gray-300">Total Assessments</span>
-                        <span class="text-blue-400 font-bold">${totalAssessments}</span>
+                        <span class="text-gray-400 font-bold">${totalAssessments}</span>
                     </div>
                     <div class="flex justify-between text-xs py-1 border-b border-gray-700">
                         <span class="text-gray-300">Unique Patients</span>
-                        <span class="text-purple-400 font-bold">${uniqueUsers}</span>
+                        <span class="text-gray-400 font-bold">${uniqueUsers}</span>
                     </div>
                     <div class="flex justify-between text-xs py-1 border-b border-gray-700">
                         <span class="text-gray-300">Total Orders</span>
@@ -2884,7 +2884,7 @@
                     ${breakdownItems.map(([k,v]) => `
                         <div class="flex justify-between text-xs py-1 border-b border-gray-700">
                             <span class="text-gray-300">${k.replace(/_/g,' ')}</span>
-                            <span class="text-blue-400 font-bold">${v}</span>
+                            <span class="text-gray-400 font-bold">${v}</span>
                         </div>`).join('')}
                 `;
             }
@@ -2974,7 +2974,7 @@
                 
                 const statusColors = {
                     pending: 'text-yellow-400 bg-yellow-400/20',
-                    processing: 'text-blue-400 bg-blue-400/20',
+                    processing: 'text-gray-400 bg-gray-400/20',
                     delivered: 'text-green-400 bg-green-400/20',
                     cancelled: 'text-red-400 bg-red-400/20'
                 };
@@ -3472,7 +3472,7 @@
             const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
             insights.push(`
                 <div class="mb-2">
-                    <i class="fas fa-chart-line text-blue-400 mr-2"></i>
+                    <i class="fas fa-chart-line text-gray-400 mr-2"></i>
                     <strong>Total Inventory Value:</strong> ₹${totalValue.toFixed(2)}
                 </div>
             `);
@@ -3487,7 +3487,7 @@
             if (topCategory) {
                 insights.push(`
                     <div class="mb-2">
-                        <i class="fas fa-tags text-purple-400 mr-2"></i>
+                        <i class="fas fa-tags text-gray-400 mr-2"></i>
                         <strong>Most Stocked Category:</strong> ${topCategory[0]} (${topCategory[1]} items)
                     </div>
                 `);
@@ -3610,6 +3610,6 @@
         }
     }
     </script>
-    <script type="module" src="ballpit.js"></script>
+    <script src="shapegrid.js"></script>
 </body>
 </html>
