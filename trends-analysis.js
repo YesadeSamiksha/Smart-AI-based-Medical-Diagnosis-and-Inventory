@@ -3,7 +3,7 @@
  * Analyzes most common medical conditions based on real user data from the database
  */
 
-const API_URL = 'http://localhost:5000/api';
+var API_URL = 'http://localhost:5000/api';
 
 // Store analysis data
 let trendsData = {
