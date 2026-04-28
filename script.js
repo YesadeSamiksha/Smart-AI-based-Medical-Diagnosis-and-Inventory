@@ -539,102 +539,40 @@ function initializeSmoothScroll() {
 }
 
 // ========================================================
-// GEMINI AI INTEGRATION — Fallback for unrecognized queries
+// GEMINI AI INTEGRATION — Proxied through Flask backend
+// API key is stored in .env and never exposed to frontend
 // ========================================================
 
-const GEMINI_API_KEY = '';
-const GEMINI_MODELS = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite'
-];
+const FLASK_API_URL = 'http://localhost:5000/api';
 
 async function askGemini(userMessage) {
-    const systemPrompt = `You are MedAI Assistant, an AI-powered health chatbot embedded in the MedAI medical diagnosis platform.
+    try {
+        const response = await fetch(`${FLASK_API_URL}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userMessage })
+        });
 
-About MedAI:
-- MedAI is an AI-powered medical diagnosis and inventory management platform
-- It offers health assessments for diabetes, lung cancer, and blood pressure
-- It uses machine learning models with 94% accuracy
-- It has a medicine inventory management system with automated reordering
-- Built with HTML/CSS/JS frontend, Python Flask backend, Supabase database, and Google Gemini AI
-- Users can navigate the platform using voice commands
-
-Your role:
-- Answer health and medical questions accurately and helpfully
-- Provide general medical information, symptoms, prevention tips, and wellness advice
-- Recommend users to consult a real doctor for serious conditions
-- When asked about MedAI, describe the platform's features and capabilities
-- Keep responses concise (under 200 words) and use bullet points where helpful
-- Use relevant emojis to make responses friendly
-- Always add a disclaimer for medical advice: "Please consult a healthcare professional for personalized medical advice."
-- NEVER diagnose or prescribe specific medications for individual cases
-- For emergencies, direct users to call emergency services (911/112/108)`;
-
-    const requestBody = {
-        contents: [{
-            parts: [
-                { text: systemPrompt + '\n\nUser question: ' + userMessage }
-            ]
-        }],
-        generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-            topP: 0.9
-        },
-        safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
-        ]
-    };
-
-    // Try each model with retry
-    for (const model of GEMINI_MODELS) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-        
-        for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-                if (attempt > 0) {
-                    // Wait before retry (exponential backoff)
-                    await new Promise(r => setTimeout(r, 2000 * attempt));
-                }
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (response.status === 429) {
-                    console.warn(`Rate limited on ${model}, attempt ${attempt + 1}`);
-                    continue; // Try next attempt or next model
-                }
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('Gemini API error:', response.status, errorData);
-                    continue;
-                }
-
-                const data = await response.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                    return text
-                        .replace(/\*\*(.*?)\*\*/g, '$1')
-                        .replace(/\*(.*?)\*/g, '$1')
-                        .replace(/#{1,3}\s/g, '')
-                        .trim();
-                }
-            } catch (err) {
-                console.warn(`Gemini fetch error (${model}, attempt ${attempt + 1}):`, err);
-            }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn('Chat API error:', response.status, errorData);
+            throw new Error(errorData.error || 'Server error');
         }
-    }
 
-    // All API attempts failed — use smart local fallback
-    console.warn('All Gemini attempts failed, using local fallback');
-    return getLocalFallbackResponse(userMessage);
+        const data = await response.json();
+        if (data.reply) {
+            return data.reply
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/#{1,3}\s/g, '')
+                .trim();
+        }
+
+        throw new Error('Empty response from server');
+    } catch (err) {
+        console.warn('Chat proxy failed, using local fallback:', err.message);
+        return getLocalFallbackResponse(userMessage);
+    }
 }
 
 // ========================================================

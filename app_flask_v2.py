@@ -63,24 +63,24 @@ try:
         genai.configure(api_key=GEMINI_API_KEY)
         gemini_model = genai.GenerativeModel('gemini-1.5-flash')
         GEMINI_AVAILABLE = True
-        print("✅ Gemini AI configured")
+        print("[OK] Gemini AI configured")
     else:
-        print("⚠ Gemini API key not set")
+        print("[WARN] Gemini API key not set")
 except ImportError:
-    print("⚠ Install google-generativeai: pip install google-generativeai")
+    print("[WARN] Install google-generativeai: pip install google-generativeai")
 except Exception as e:
-    print(f"⚠ Gemini error: {e}")
+    print(f"[WARN] Gemini error: {e}")
 
 try:
     from supabase import create_client
     if SUPABASE_KEY and SUPABASE_KEY != 'your_supabase_anon_key_here':
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         SUPABASE_AVAILABLE = True
-        print("✅ Supabase connected")
+        print("[OK] Supabase connected")
 except ImportError:
-    print("⚠ Install supabase: pip install supabase")
+    print("[WARN] Install supabase: pip install supabase")
 except Exception as e:
-    print(f"⚠ Supabase error: {e}")
+    print(f"[WARN] Supabase error: {e}")
 
 # In-memory storage (fallback when Supabase unavailable)
 memory_db = {
@@ -1263,19 +1263,117 @@ def health():
     })
 
 # ==================================================
+# API Routes - Chat Proxy (Gemini via .env key)
+# ==================================================
+@app.route('/api/chat', methods=['POST'])
+def chat_proxy():
+    """Proxy chatbot requests to Gemini API using server-side API key from .env"""
+    try:
+        data = request.json
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({'error': 'No message provided'}), 400
+        
+        if not GEMINI_API_KEY or GEMINI_API_KEY == 'your_gemini_api_key_here':
+            return jsonify({'error': 'Gemini API key not configured on server'}), 503
+        
+        system_prompt = """You are MedAI Assistant, an AI-powered health chatbot embedded in the MedAI medical diagnosis platform.
+
+About MedAI:
+- MedAI is an AI-powered medical diagnosis and inventory management platform
+- It offers health assessments for diabetes, lung cancer, and blood pressure
+- It uses machine learning models with 94% accuracy
+- It has a medicine inventory management system with automated reordering
+- Built with HTML/CSS/JS frontend, Python Flask backend, Supabase database, and Google Gemini AI
+- Users can navigate the platform using voice commands
+
+Your role:
+- Answer health and medical questions accurately and helpfully
+- Provide general medical information, symptoms, prevention tips, and wellness advice
+- Recommend users to consult a real doctor for serious conditions
+- When asked about MedAI, describe the platform's features and capabilities
+- Keep responses concise (under 200 words) and use bullet points where helpful
+- Use relevant emojis to make responses friendly
+- Always add a disclaimer for medical advice: "Please consult a healthcare professional for personalized medical advice."
+- NEVER diagnose or prescribe specific medications for individual cases
+- For emergencies, direct users to call emergency services (911/112/108)"""
+
+        request_body = {
+            "contents": [{
+                "parts": [
+                    {"text": system_prompt + "\n\nUser question: " + user_message}
+                ]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 500,
+                "topP": 0.9
+            },
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"}
+            ]
+        }
+        
+        import urllib.request
+        import urllib.error
+        
+        models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite']
+        last_error = None
+        
+        for model_name in models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+            
+            for attempt in range(2):
+                try:
+                    req = urllib.request.Request(
+                        url,
+                        data=json.dumps(request_body).encode('utf-8'),
+                        headers={'Content-Type': 'application/json'},
+                        method='POST'
+                    )
+                    
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        resp_data = json.loads(resp.read().decode('utf-8'))
+                        
+                    reply = resp_data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                    
+                    if reply:
+                        return jsonify({'reply': reply, 'model': model_name})
+                        
+                except urllib.error.HTTPError as e:
+                    last_error = f"HTTP {e.code}"
+                    if e.code == 429:
+                        import time
+                        time.sleep(2 * (attempt + 1))
+                        continue
+                except Exception as e:
+                    last_error = str(e)
+                    continue
+        
+        return jsonify({'error': f'All models failed: {last_error}'}), 502
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ==================================================
 # Run
 # ==================================================
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("   🏥 MedAI Backend Server v2.0")
+    print("   MedAI Backend Server v2.0")
     print("="*60)
-    print(f"\n🔑 Admin: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
-    print(f"🤖 Gemini AI: {'✅ Ready' if GEMINI_AVAILABLE else '❌ Not configured'}")
-    print(f"💾 Supabase: {'✅ Connected' if SUPABASE_AVAILABLE else '⚠ Using memory storage'}")
-    print(f"\n🌐 Server: http://localhost:5000")
-    print("\n📌 Key Endpoints:")
+    print(f"\nAdmin: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
+    print(f"Gemini AI: {'Ready' if GEMINI_AVAILABLE else 'Not configured'}")
+    print(f"Supabase: {'Connected' if SUPABASE_AVAILABLE else 'Using memory storage'}")
+    print(f"\nServer: http://localhost:5000")
+    print("\nKey Endpoints:")
     print("   POST /api/admin/login")
     print("   POST /api/symptoms/analyze")
+    print("   POST /api/chat")
     print("   GET  /api/user/<id>/trends")
     print("="*60 + "\n")
     
