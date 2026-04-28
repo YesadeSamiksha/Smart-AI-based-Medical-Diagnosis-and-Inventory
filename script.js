@@ -573,7 +573,7 @@ async function askGemini(userMessage) {
         console.warn('Chat proxy failed, using local fallback:', err.message);
         return getLocalFallbackResponse(userMessage);
     }
-}
+ }
 
 // ========================================================
 // LOCAL FALLBACK — Handles common health queries offline

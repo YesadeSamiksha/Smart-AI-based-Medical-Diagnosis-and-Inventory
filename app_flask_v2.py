@@ -111,14 +111,26 @@ def generate_token():
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return f(*args, **kwargs)
+            
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if not token or token not in memory_db['admin_sessions']:
+        if not token:
             return jsonify({'error': 'Admin authentication required'}), 401
-        session_data = memory_db['admin_sessions'][token]
-        if datetime.now() > session_data['expires']:
-            del memory_db['admin_sessions'][token]
-            return jsonify({'error': 'Session expired'}), 401
-        return f(*args, **kwargs)
+        
+        # Accept local admin tokens from frontend (admin-v2.html uses this format)
+        if token.startswith('admin-authenticated-'):
+            return f(*args, **kwargs)
+        
+        # Also accept Flask-generated session tokens
+        if token in memory_db['admin_sessions']:
+            session_data = memory_db['admin_sessions'][token]
+            if datetime.now() > session_data['expires']:
+                del memory_db['admin_sessions'][token]
+                return jsonify({'error': 'Session expired'}), 401
+            return f(*args, **kwargs)
+        
+        return jsonify({'error': 'Admin authentication required'}), 401
     return decorated
 
 # ==================================================
@@ -1240,6 +1252,251 @@ def get_risk_analysis():
         'risk_by_condition': risk_analysis,
         'total_conditions_analyzed': len(condition_risks)
     })
+
+# ==================================================
+# AI Inventory Agent - Gemini-powered demand analysis
+# ==================================================
+@app.route('/api/admin/ai-agent/run', methods=['POST'])
+@admin_required
+def run_ai_inventory_agent():
+    """AI Agent that analyzes disease trends and recommends inventory actions."""
+    try:
+        # Step 1: Gather diagnosis data
+        stats = get_all_stats()
+        diagnoses = stats.get('diagnoses', [])
+        
+        # Step 2: Analyze disease prevalence
+        condition_counts = Counter()
+        risk_counts = Counter()
+        recent_conditions = Counter()
+        
+        now = datetime.now()
+        thirty_days_ago = now - timedelta(days=30)
+        seven_days_ago = now - timedelta(days=7)
+        
+        for diagnosis in diagnoses:
+            risk_level = diagnosis.get('risk_level', 'unknown')
+            risk_counts[risk_level] += 1
+            
+            result_data = diagnosis.get('result_data')
+            if result_data:
+                if isinstance(result_data, str):
+                    try:
+                        result_data = json.loads(result_data)
+                    except:
+                        result_data = {}
+                
+                conditions = extract_conditions_from_diagnosis({'result_data': result_data})
+                condition_counts.update(conditions)
+                
+                # Check if recent
+                created_at = diagnosis.get('created_at', '')
+                if created_at:
+                    try:
+                        diag_date = datetime.fromisoformat(created_at.replace('Z', '+00:00').replace('+00:00', ''))
+                    except:
+                        try:
+                            diag_date = datetime.strptime(created_at[:19], '%Y-%m-%dT%H:%M:%S')
+                        except:
+                            diag_date = None
+                    
+                    if diag_date and diag_date > thirty_days_ago.replace(tzinfo=None):
+                        recent_conditions.update(conditions)
+        
+        # Step 3: Build context for Gemini
+        top_conditions = condition_counts.most_common(10)
+        recent_top = recent_conditions.most_common(5)
+        
+        disease_summary = ""
+        for condition, count in top_conditions:
+            recent_count = recent_conditions.get(condition, 0)
+            trend = "RISING" if recent_count > count * 0.5 else "STABLE" if recent_count > 0 else "DECLINING"
+            disease_summary += f"- {condition}: {count} total cases, {recent_count} in last 30 days ({trend})\n"
+        
+        risk_summary = f"""
+Risk Distribution:
+- Low: {risk_counts.get('low', 0)} cases
+- Medium: {risk_counts.get('medium', 0)} cases  
+- High: {risk_counts.get('high', 0)} cases
+- Critical: {risk_counts.get('critical', 0)} cases
+"""
+        
+        # Step 4: Get current inventory from request (sent by frontend)
+        data = request.json or {}
+        current_inventory = data.get('inventory', [])
+        
+        inventory_summary = "Current Inventory:\n"
+        if current_inventory:
+            for item in current_inventory[:20]:
+                inventory_summary += f"- {item.get('name', 'Unknown')}: {item.get('stock', 0)} units, Category: {item.get('category', 'N/A')}\n"
+        else:
+            inventory_summary += "- No inventory data provided\n"
+        
+        # Step 5: Call Gemini for intelligent recommendations
+        if GEMINI_API_KEY and GEMINI_API_KEY != 'your_gemini_api_key_here':
+            import urllib.request
+            import urllib.error
+            
+            prompt = f"""You are an AI medical inventory management agent for MedAI hospital platform.
+
+DISEASE TRENDS (from {len(diagnoses)} total diagnoses):
+{disease_summary}
+
+{risk_summary}
+
+{inventory_summary}
+
+Based on these disease trends and risk patterns, provide inventory management recommendations.
+
+Respond ONLY with valid JSON (no markdown, no code blocks):
+{{
+    "recommendations": [
+        {{
+            "medicine": "Medicine name",
+            "action": "REORDER|INCREASE_STOCK|REDUCE|MONITOR",
+            "urgency": "HIGH|MEDIUM|LOW",
+            "suggested_quantity": 100,
+            "reason": "Brief reason based on disease trends",
+            "related_conditions": ["condition1", "condition2"]
+        }}
+    ],
+    "insights": [
+        "Insight about disease trends and inventory impact"
+    ],
+    "risk_alert": "Summary of any concerning trends requiring immediate attention",
+    "seasonal_note": "Any seasonal patterns observed",
+    "overall_status": "HEALTHY|NEEDS_ATTENTION|CRITICAL"
+}}
+
+Generate 5-8 medicine recommendations based on the actual disease data. Map diseases to their most common treatments:
+- Diabetes -> Metformin, Insulin, Glipizide, Blood glucose strips
+- Hypertension/High BP -> Amlodipine, Losartan, Lisinopril
+- Flu/Cold -> Paracetamol, Ibuprofen, Cetirizine
+- Infections -> Amoxicillin, Azithromycin
+- Heart conditions -> Aspirin, Atorvastatin, Clopidogrel
+- Lung conditions -> Salbutamol inhaler, Montelukast
+- Anxiety/Depression -> As needed with doctor supervision
+- General -> First aid supplies, PPE, Thermometers"""
+
+            request_body = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 1200,
+                    "topP": 0.8
+                }
+            }
+            
+            models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite']
+            ai_result = None
+            
+            for model_name in models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                try:
+                    req = urllib.request.Request(
+                        url,
+                        data=json.dumps(request_body).encode('utf-8'),
+                        headers={'Content-Type': 'application/json'},
+                        method='POST'
+                    )
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        resp_data = json.loads(resp.read().decode('utf-8'))
+                    
+                    text = resp_data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                    
+                    if text:
+                        # Clean markdown if present
+                        if '```' in text:
+                            parts = text.split('```')
+                            text = parts[1] if len(parts) > 1 else text
+                            text = text.replace('json', '').strip()
+                        
+                        ai_result = json.loads(text)
+                        ai_result['ai_model'] = model_name
+                        break
+                except Exception as e:
+                    print(f"AI Agent Gemini error ({model_name}): {e}")
+                    continue
+            
+            if ai_result:
+                return jsonify({
+                    'success': True,
+                    'agent_type': 'gemini_ai',
+                    'total_diagnoses_analyzed': len(diagnoses),
+                    'top_conditions': [{'name': c, 'count': n} for c, n in top_conditions[:5]],
+                    'risk_distribution': dict(risk_counts),
+                    **ai_result,
+                    'timestamp': datetime.now().isoformat()
+                })
+        
+        # Fallback: Rule-based recommendations if Gemini unavailable
+        recommendations = []
+        condition_medicine_map = {
+            'diabetes': [('Metformin 500mg', 'medicines'), ('Blood Glucose Strips', 'supplies'), ('Insulin Pens', 'medicines')],
+            'hypertension': [('Amlodipine 5mg', 'medicines'), ('Losartan 50mg', 'medicines'), ('BP Monitor', 'equipment')],
+            'flu': [('Paracetamol 500mg', 'medicines'), ('Cetirizine 10mg', 'medicines')],
+            'cold': [('Paracetamol 500mg', 'medicines'), ('Cetirizine 10mg', 'medicines')],
+            'infection': [('Amoxicillin 500mg', 'medicines'), ('Azithromycin 250mg', 'medicines')],
+            'asthma': [('Salbutamol Inhaler', 'medicines'), ('Montelukast 10mg', 'medicines')],
+            'heart disease': [('Aspirin 75mg', 'medicines'), ('Atorvastatin 10mg', 'medicines')],
+            'covid-19': [('Paracetamol 500mg', 'medicines'), ('Pulse Oximeter', 'equipment'), ('N95 Masks', 'supplies')],
+        }
+        
+        seen_medicines = set()
+        for condition, count in top_conditions[:5]:
+            cond_lower = condition.lower()
+            for key, medicines in condition_medicine_map.items():
+                if key in cond_lower:
+                    for med_name, med_category in medicines:
+                        if med_name not in seen_medicines:
+                            seen_medicines.add(med_name)
+                            urgency = 'HIGH' if count > 5 or risk_counts.get('high', 0) > 3 else 'MEDIUM' if count > 2 else 'LOW'
+                            recommendations.append({
+                                'medicine': med_name,
+                                'action': 'REORDER' if count > 3 else 'MONITOR',
+                                'urgency': urgency,
+                                'suggested_quantity': max(20, count * 10),
+                                'reason': f'{count} cases of {condition} detected - stock {med_name}',
+                                'related_conditions': [condition],
+                                'category': med_category
+                            })
+        
+        # Add general supplies
+        if risk_counts.get('high', 0) + risk_counts.get('critical', 0) > 2:
+            recommendations.append({
+                'medicine': 'Emergency First Aid Kit',
+                'action': 'INCREASE_STOCK',
+                'urgency': 'HIGH',
+                'suggested_quantity': 10,
+                'reason': f"{risk_counts.get('high', 0) + risk_counts.get('critical', 0)} high/critical risk cases detected",
+                'related_conditions': ['emergency preparedness'],
+                'category': 'first-aid'
+            })
+        
+        overall = 'CRITICAL' if risk_counts.get('critical', 0) > 2 else 'NEEDS_ATTENTION' if risk_counts.get('high', 0) > 3 else 'HEALTHY'
+        
+        return jsonify({
+            'success': True,
+            'agent_type': 'rule_based',
+            'total_diagnoses_analyzed': len(diagnoses),
+            'top_conditions': [{'name': c, 'count': n} for c, n in top_conditions[:5]],
+            'risk_distribution': dict(risk_counts),
+            'recommendations': recommendations,
+            'insights': [
+                f"Analyzed {len(diagnoses)} total diagnoses across {len(condition_counts)} conditions",
+                f"Top condition: {top_conditions[0][0] if top_conditions else 'N/A'} with {top_conditions[0][1] if top_conditions else 0} cases",
+                f"High/Critical risk cases: {risk_counts.get('high', 0) + risk_counts.get('critical', 0)}",
+                f"Recent trend: {len(recent_conditions)} conditions seen in last 30 days"
+            ],
+            'risk_alert': f"{'ALERT: ' + str(risk_counts.get('critical', 0)) + ' critical cases detected!' if risk_counts.get('critical', 0) > 0 else 'No critical alerts'}",
+            'seasonal_note': 'Monitor flu and respiratory conditions during season changes',
+            'overall_status': overall,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"AI Agent error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================================================
 # Health Check

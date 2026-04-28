@@ -121,7 +121,9 @@
         .stat-big { font-size: 40px; font-weight: 700; margin-bottom: 4px; }
         .stat-label { color: #9ca3af; font-size: 14px; }
         
-        .chart-container { height: 280px; margin-top: 16px; }
+        .chart-container { position: relative; height: 280px; margin-top: 16px; overflow: hidden; }
+        .chart-container canvas { max-height: 100% !important; }
+        .chart-container > div { position: relative; width: 100%; height: 100%; }
         
         /* Users Table */
         .users-table {
@@ -895,8 +897,8 @@
             <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-disease mr-2 text-red-400"></i>Most Common Conditions (Real Data)</h3>
-                    <div class="chart-container" style="height:280px;">
-                        <div id="commonConditionsChart"></div>
+                    <div class="chart-container" style="height:260px;">
+                        <canvas id="commonConditionsChart"></canvas>
                     </div>
                 </div>
                 <div class="admin-card">
@@ -911,14 +913,14 @@
             <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Condition Trends Over Time</h3>
-                    <div class="chart-container" style="height:220px;">
-                        <div id="conditionTrendChart"></div>
+                    <div class="chart-container" style="height:240px;">
+                        <canvas id="conditionTrendChart"></canvas>
                     </div>
                 </div>
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>Risk Distribution by Condition</h3>
-                    <div class="chart-container" style="height:220px;">
-                        <div id="conditionRiskChart"></div>
+                    <div class="chart-container" style="height:240px;">
+                        <canvas id="conditionRiskChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -927,13 +929,13 @@
             <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-disease mr-2 text-red-400"></i>Disease Type Distribution</h3>
-                    <div class="chart-container" style="height:220px;">
+                    <div class="chart-container" style="height:240px;">
                         <canvas id="trendDiseaseChart"></canvas>
                     </div>
                 </div>
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-calendar-alt mr-2 text-gray-400"></i>Monthly Diagnosis Trend (Last 6 Months)</h3>
-                    <div class="chart-container" style="height:220px;">
+                    <div class="chart-container" style="height:240px;">
                         <canvas id="trendMonthlyChart"></canvas>
                     </div>
                 </div>
@@ -943,7 +945,7 @@
             <div class="admin-grid mb-6" style="grid-template-columns: 1fr 1fr;">
                 <div class="admin-card">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>Risk Level Breakdown</h3>
-                    <div class="chart-container" style="height:220px;">
+                    <div class="chart-container" style="height:240px;">
                         <canvas id="trendRiskChart"></canvas>
                     </div>
                 </div>
@@ -1151,6 +1153,9 @@
                     window.location.href = 'login-admin.html';
                     return;
                 }
+                
+                // Set global adminToken so API calls can use it
+                adminToken = token;
                 
                 if (adminEmail !== 'admin@medai.com') {
                     console.warn('❌ Unauthorized admin email');
@@ -2345,6 +2350,7 @@
         
         // ===== TRENDS & MEDICINE PREDICTION =====
         let trendDiseaseChart = null, trendMonthlyChart = null, trendRiskChart = null, trendActivityChart = null;
+        let commonConditionsChartInstance = null, conditionTrendChartInstance = null, conditionRiskChartInstance = null;
         
         // Load Most Common Conditions from Database
         async function loadCommonConditions() {
@@ -2412,17 +2418,19 @@
         async function loadTrendsData() {
             console.log('📈 Loading trends and prediction data...');
             try {
-                // First, try to load real condition analysis data
-                const conditionData = await loadCommonConditionsFromDB(10);
-                const trendData = await loadConditionTrendsFromDB();
-                const riskData = await loadRiskAnalysisFromDB();
+                // Load real condition analysis data from Flask backend
+                const [conditionData, trendData, riskData] = await Promise.all([
+                    loadCommonConditions(),
+                    loadConditionTrends(),
+                    loadRiskAnalysis()
+                ]);
                 
                 // Then load traditional trends from Supabase
                 const supabase = window.MedAISupabase?.getSupabase();
                 let diagnoses = [], orders = [], activities = [];
                 
                 if (supabase) {
-                    // Fetch all diagnosis results (anon key - no auth needed after RLS fix)
+                    // Fetch all diagnosis results
                     const { data: diagData } = await supabase
                         .from('diagnosis_results')
                         .select('id, user_id, diagnosis_type, risk_level, created_at, result_data')
@@ -2453,7 +2461,7 @@
                 
                 analyzeTrendsAndRender(diagnoses, orders, activities);
                 
-                // Display real condition analysis if available
+                // Display real condition analysis if available (overrides mock charts)
                 if (conditionData) {
                     displayCommonConditions(conditionData);
                 }
@@ -2487,12 +2495,13 @@
                 listEl.innerHTML = TrendsAnalysis.formatConditionDisplay(data);
             }
             
-            // Display chart
-            const chartEl = document.getElementById('commonConditionsChart');
-            if (chartEl) {
-                chartEl.innerHTML = '';
+            // Display chart using existing canvas
+            const canvas = document.getElementById('commonConditionsChart');
+            if (canvas) {
                 try {
-                    const conditions = data.data.most_common.slice(0, 10);
+                    if (commonConditionsChartInstance) commonConditionsChartInstance.destroy();
+                    
+                    const conditions = data.data.most_common.slice(0, 8);
                     const labels = conditions.map(c => c.condition);
                     const values = conditions.map(c => c.count);
                     const colors = conditions.map(c => {
@@ -2503,10 +2512,7 @@
                         }
                     });
                     
-                    const canvas = document.createElement('canvas');
-                    chartEl.appendChild(canvas);
-                    
-                    new Chart(canvas, {
+                    commonConditionsChartInstance = new Chart(canvas, {
                         type: 'bar',
                         data: {
                             labels: labels,
@@ -2515,20 +2521,23 @@
                                 data: values,
                                 backgroundColor: colors,
                                 borderColor: '#1e293b',
-                                borderWidth: 1
+                                borderWidth: 1,
+                                borderRadius: 6
                             }]
                         },
                         options: {
                             indexAxis: 'y',
                             responsive: true,
-                            maintainAspectRatio: true,
+                            maintainAspectRatio: false,
                             scales: {
                                 x: {
                                     beginAtZero: true,
-                                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                    ticks: { color: '#9ca3af' }
                                 },
                                 y: {
-                                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                    ticks: { color: '#d1d5db', font: { size: 11 } }
                                 }
                             },
                             plugins: {
@@ -2546,16 +2555,34 @@
         function displayConditionTrends(data) {
             if (!data || !data.trends || data.trends.length === 0) return;
             
-            const chartEl = document.getElementById('conditionTrendChart');
-            if (!chartEl) return;
+            const canvas = document.getElementById('conditionTrendChart');
+            if (!canvas) return;
             
-            chartEl.innerHTML = '';
             try {
+                if (conditionTrendChartInstance) conditionTrendChartInstance.destroy();
+                
                 const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#cccccc'];
                 const datasets = [];
                 
+                // Collect all unique dates for x-axis labels
+                const allDates = new Set();
+                data.trends.forEach(trend => {
+                    trend.trend.forEach(t => allDates.add(t.date));
+                });
+                const sortedDates = Array.from(allDates).sort();
+                
+                // Format dates for display
+                const dateLabels = sortedDates.map(d => {
+                    const date = new Date(d + 'T12:00:00');
+                    return date.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+                });
+                
                 data.trends.slice(0, 5).forEach((trend, index) => {
-                    const values = trend.trend.map(t => t.count);
+                    // Map data to align with all dates
+                    const trendMap = {};
+                    trend.trend.forEach(t => { trendMap[t.date] = t.count; });
+                    const values = sortedDates.map(d => trendMap[d] || 0);
+                    
                     datasets.push({
                         label: trend.condition,
                         data: values,
@@ -2563,37 +2590,37 @@
                         backgroundColor: `${colors[index % colors.length]}20`,
                         fill: true,
                         tension: 0.4,
-                        pointRadius: 3,
-                        pointBackgroundColor: colors[index % colors.length]
+                        pointRadius: 4,
+                        pointBackgroundColor: colors[index % colors.length],
+                        pointBorderColor: '#1e293b',
+                        pointBorderWidth: 1,
+                        borderWidth: 2
                     });
                 });
                 
-                const canvas = document.createElement('canvas');
-                chartEl.appendChild(canvas);
-                
-                new Chart(canvas, {
+                conditionTrendChartInstance = new Chart(canvas, {
                     type: 'line',
                     data: {
-                        labels: Array.from({length: 10}, (_, i) => `Period ${i+1}`),
+                        labels: dateLabels,
                         datasets: datasets
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                labels: { color: '#d1d5db' }
+                                labels: { color: '#d1d5db', font: { size: 11 } }
                             }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
                                 grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                                ticks: { color: '#9ca3af' }
+                                ticks: { color: '#9ca3af', stepSize: 1 }
                             },
                             x: {
                                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                                ticks: { color: '#9ca3af' }
+                                ticks: { color: '#9ca3af', font: { size: 10 } }
                             }
                         }
                     }
@@ -2607,42 +2634,46 @@
         function displayRiskAnalysis(data) {
             if (!data || !data.risk_by_condition || data.risk_by_condition.length === 0) return;
             
-            const chartEl = document.getElementById('conditionRiskChart');
-            if (!chartEl) return;
+            const canvas = document.getElementById('conditionRiskChart');
+            if (!canvas) return;
             
-            chartEl.innerHTML = '';
             try {
-                const topCondition = data.risk_by_condition[0];
-                const canvas = document.createElement('canvas');
-                chartEl.appendChild(canvas);
+                if (conditionRiskChartInstance) conditionRiskChartInstance.destroy();
                 
-                new Chart(canvas, {
+                // Aggregate risk across ALL conditions, not just the top one
+                const totalRisk = { low: 0, medium: 0, high: 0, critical: 0 };
+                data.risk_by_condition.forEach(cond => {
+                    totalRisk.low += cond.risk_distribution.low || 0;
+                    totalRisk.medium += cond.risk_distribution.medium || 0;
+                    totalRisk.high += cond.risk_distribution.high || 0;
+                    totalRisk.critical += cond.risk_distribution.critical || 0;
+                });
+                
+                conditionRiskChartInstance = new Chart(canvas, {
                     type: 'doughnut',
                     data: {
                         labels: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical'],
                         datasets: [{
-                            data: [
-                                topCondition.risk_distribution.low,
-                                topCondition.risk_distribution.medium,
-                                topCondition.risk_distribution.high,
-                                topCondition.risk_distribution.critical
-                            ],
+                            data: [totalRisk.low, totalRisk.medium, totalRisk.high, totalRisk.critical],
                             backgroundColor: [
-                                'rgba(16, 185, 129, 0.8)',
-                                'rgba(245, 158, 11, 0.8)',
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(200, 200, 200, 0.8)'
+                                'rgba(16, 185, 129, 0.85)',
+                                'rgba(245, 158, 11, 0.85)',
+                                'rgba(239, 68, 68, 0.85)',
+                                'rgba(139, 92, 246, 0.85)'
                             ],
                             borderColor: '#1e293b',
-                            borderWidth: 1
+                            borderWidth: 2,
+                            hoverOffset: 8
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: true,
+                        maintainAspectRatio: false,
+                        cutout: '55%',
                         plugins: {
                             legend: {
-                                labels: { color: '#d1d5db' }
+                                position: 'bottom',
+                                labels: { color: '#d1d5db', padding: 12, font: { size: 11 } }
                             }
                         }
                     }
@@ -3316,68 +3347,209 @@
             }
         }
         
-        // Run AI Agent analysis and actions
+        // Run AI Agent analysis via Flask backend
         async function runAIAgent() {
-            console.log('🤖 AI Agent: Running inventory analysis...');
+            console.log('AI Agent: Running inventory analysis via backend...');
+            
+            const insightsEl = document.getElementById('aiInsights');
+            insightsEl.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin mr-2 text-cyan-400"></i>
+                    <span class="text-cyan-400">AI Agent analyzing disease trends & inventory...</span>
+                </div>
+            `;
             
             try {
-                const supabase = window.MedAISupabase.getSupabase();
-                if (!supabase) throw new Error('Supabase not initialized');
+                const token = localStorage.getItem('medai_admin_token');
                 
-                // Get current inventory
-                const { data: inventory, error: invError } = await supabase
-                    .from('inventory')
-                    .select('*');
-                
-                if (invError) throw invError;
-                
-                inventoryData = inventory || [];
-                
-                // Analyze inventory
-                const lowStockItems = inventory.filter(item => 
-                    item.quantity > 0 && item.quantity < LOW_STOCK_THRESHOLD
-                );
-                const outOfStockItems = inventory.filter(item => 
-                    !item.quantity || item.quantity === 0
-                );
-                
-                console.log(`🤖 AI Agent: Found ${lowStockItems.length} low stock, ${outOfStockItems.length} out of stock`);
-                
-                // Auto-reorder low stock items if AI is enabled
-                if (aiAgentEnabled) {
-                    for (const item of lowStockItems) {
-                        await createAutoReorder(item);
+                // Gather current inventory data to send to backend
+                let currentInventory = [];
+                try {
+                    const supabase = window.MedAISupabase.getSupabase();
+                    if (supabase) {
+                        const { data: inv } = await supabase.from('inventory').select('*');
+                        currentInventory = inv || [];
+                        inventoryData = currentInventory;
                     }
-                    
-                    for (const item of outOfStockItems) {
-                        await createAutoReorder(item, true);
-                    }
+                } catch (e) {
+                    console.warn('Could not fetch inventory for AI agent:', e.message);
                 }
                 
-                // Generate AI insights
-                await generateAIInsights(inventory, lowStockItems, outOfStockItems);
+                // Call Flask AI agent endpoint
+                const response = await fetch(`${API_URL}/admin/ai-agent/run`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inventory: currentInventory.map(item => ({
+                            name: item.name,
+                            stock: item.quantity,
+                            category: item.category,
+                            price: item.price
+                        }))
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+                
+                console.log('AI Agent: Analysis complete -', data.agent_type);
                 
                 // Update stats
-                await updateAIStats();
-                
-                // Update last check time
+                document.getElementById('aiItemsMonitored').textContent = currentInventory.length || data.total_diagnoses_analyzed || 0;
+                document.getElementById('aiLowStockAlerts').textContent = data.recommendations?.filter(r => r.urgency === 'HIGH').length || 0;
+                document.getElementById('aiAutoOrders').textContent = data.recommendations?.filter(r => r.action === 'REORDER').length || 0;
                 document.getElementById('aiLastCheck').textContent = new Date().toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
                     minute: '2-digit' 
                 });
                 
-                if (lowStockItems.length > 0 || outOfStockItems.length > 0) {
-                    addAILog(
-                        `Analyzed ${inventory.length} items - ${lowStockItems.length} low stock alerts, ${outOfStockItems.length} out of stock`,
-                        'warning'
-                    );
-                } else {
-                    addAILog(`Analyzed ${inventory.length} items - all stock levels healthy`, 'success');
+                // Build insights display
+                let insightsHTML = '';
+                
+                // Overall status banner
+                const statusColors = {
+                    'HEALTHY': 'text-green-400',
+                    'NEEDS_ATTENTION': 'text-yellow-400',
+                    'CRITICAL': 'text-red-400'
+                };
+                const statusIcons = {
+                    'HEALTHY': 'check-circle',
+                    'NEEDS_ATTENTION': 'exclamation-triangle',
+                    'CRITICAL': 'times-circle'
+                };
+                const status = data.overall_status || 'HEALTHY';
+                insightsHTML += `
+                    <div class="mb-4 p-3 rounded-lg" style="background: rgba(0,0,0,0.3);">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-${statusIcons[status] || 'info-circle'} ${statusColors[status] || 'text-gray-400'}"></i>
+                            <strong class="${statusColors[status] || 'text-gray-400'}">Overall Status: ${status.replace('_', ' ')}</strong>
+                            <span class="text-xs text-gray-500 ml-auto">Powered by ${data.agent_type === 'gemini_ai' ? 'Gemini AI' : 'Rule Engine'}</span>
+                        </div>
+                        <div class="text-sm text-gray-400">${data.total_diagnoses_analyzed || 0} diagnoses analyzed</div>
+                    </div>
+                `;
+                
+                // Risk alert
+                if (data.risk_alert && !data.risk_alert.includes('No critical')) {
+                    insightsHTML += `
+                        <div class="mb-3 p-3 rounded-lg" style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444;">
+                            <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+                            <strong class="text-red-400">${data.risk_alert}</strong>
+                        </div>
+                    `;
                 }
                 
+                // Top conditions
+                if (data.top_conditions && data.top_conditions.length > 0) {
+                    insightsHTML += `
+                        <div class="mb-3">
+                            <div class="text-sm font-semibold text-gray-300 mb-2">
+                                <i class="fas fa-chart-bar mr-1 text-cyan-400"></i> Top Disease Trends
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                ${data.top_conditions.slice(0, 4).map((c, i) => `
+                                    <div class="p-2 rounded" style="background: rgba(255,255,255,0.03);">
+                                        <span class="text-xs text-gray-500">#${i+1}</span>
+                                        <span class="text-sm font-medium">${c.name}</span>
+                                        <span class="text-xs text-cyan-400 ml-1">(${c.count} cases)</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Medicine recommendations
+                if (data.recommendations && data.recommendations.length > 0) {
+                    insightsHTML += `
+                        <div class="mb-3">
+                            <div class="text-sm font-semibold text-gray-300 mb-2">
+                                <i class="fas fa-pills mr-1 text-green-400"></i> Medicine Recommendations
+                            </div>
+                            ${data.recommendations.map(rec => {
+                                const urgencyColor = rec.urgency === 'HIGH' ? 'text-red-400' : rec.urgency === 'MEDIUM' ? 'text-yellow-400' : 'text-green-400';
+                                const urgencyBg = rec.urgency === 'HIGH' ? 'rgba(239,68,68,0.1)' : rec.urgency === 'MEDIUM' ? 'rgba(234,179,8,0.1)' : 'rgba(34,197,94,0.1)';
+                                const actionIcon = rec.action === 'REORDER' ? 'shopping-cart' : rec.action === 'INCREASE_STOCK' ? 'arrow-up' : rec.action === 'REDUCE' ? 'arrow-down' : 'eye';
+                                
+                                return `
+                                    <div class="p-3 rounded-lg mb-2" style="background: ${urgencyBg}; border-left: 3px solid;">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <div class="font-semibold">
+                                                    <i class="fas fa-${actionIcon} mr-1 ${urgencyColor}"></i>
+                                                    ${rec.medicine}
+                                                </div>
+                                                <div class="text-xs text-gray-400 mt-1">${rec.reason}</div>
+                                                ${rec.related_conditions ? `<div class="text-xs text-gray-500 mt-1">Related: ${rec.related_conditions.join(', ')}</div>` : ''}
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="px-2 py-1 rounded text-xs font-semibold ${urgencyColor}" style="background: rgba(0,0,0,0.3);">
+                                                    ${rec.urgency}
+                                                </span>
+                                                <div class="text-sm font-bold mt-1">${rec.suggested_quantity} units</div>
+                                                <div class="text-xs text-gray-500">${rec.action}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+                
+                // AI Insights
+                if (data.insights && data.insights.length > 0) {
+                    insightsHTML += `
+                        <div class="mb-3">
+                            <div class="text-sm font-semibold text-gray-300 mb-2">
+                                <i class="fas fa-lightbulb mr-1 text-yellow-400"></i> AI Insights
+                            </div>
+                            ${data.insights.map(insight => `
+                                <div class="text-sm text-gray-400 mb-1">
+                                    <i class="fas fa-chevron-right text-gray-600 mr-1"></i>${insight}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                // Seasonal note
+                if (data.seasonal_note) {
+                    insightsHTML += `
+                        <div class="text-xs text-gray-500 mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.05);">
+                            <i class="fas fa-cloud-sun mr-1"></i> ${data.seasonal_note}
+                        </div>
+                    `;
+                }
+                
+                insightsEl.innerHTML = insightsHTML;
+                
+                // Add to activity log
+                addAILog(`Analysis complete: ${data.recommendations?.length || 0} recommendations, ${data.total_diagnoses_analyzed} diagnoses analyzed`, 'success');
+                
             } catch (error) {
-                console.error('❌ AI Agent error:', error);
-                addAILog(`Error during analysis: ${error.message}`, 'warning');
+                console.error('AI Agent error:', error);
+                insightsEl.innerHTML = `
+                    <div class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+                        <strong class="text-yellow-400">AI Agent Error:</strong> ${error.message}
+                    </div>
+                    <div class="text-sm text-gray-400">
+                        Make sure the Flask backend is running on port 5000.<br>
+                        Run: <code class="bg-gray-800 px-2 py-1 rounded">python app_flask_v2.py</code>
+                    </div>
+                `;
+                addAILog(`Error: ${error.message}`, 'warning');
             }
         }
         
@@ -3396,7 +3568,7 @@
                     .single();
                 
                 if (existing) {
-                    console.log(`🤖 AI Agent: Reorder already exists for ${item.name}`);
+                    console.log(`AI Agent: Reorder already exists for ${item.name}`);
                     return;
                 }
                 
@@ -3420,80 +3592,21 @@
                 
                 if (error) throw error;
                 
-                console.log(`✅ AI Agent: Created auto-reorder for ${item.name} (${reorderQty} units)`);
+                console.log(`AI Agent: Created auto-reorder for ${item.name} (${reorderQty} units)`);
                 addAILog(
                     `Auto-ordered ${reorderQty} units of "${item.name}" - Current stock: ${item.quantity || 0}`,
                     'success'
                 );
                 
             } catch (error) {
-                console.error('❌ AI Agent reorder error:', error);
+                console.error('AI Agent reorder error:', error);
             }
         }
         
-        // Generate AI insights
+        // Generate AI insights (now handled by runAIAgent backend call)
         async function generateAIInsights(inventory, lowStock, outOfStock) {
-            const insightsEl = document.getElementById('aiInsights');
-            const insights = [];
-            
-            // Stock alerts
-            if (outOfStock.length > 0) {
-                insights.push(`
-                    <div class="mb-2">
-                        <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
-                        <strong class="text-red-400">Critical:</strong> ${outOfStock.length} item(s) out of stock
-                        ${aiAgentEnabled ? ' - Auto-reorder initiated' : ' - Enable AI to auto-order'}
-                    </div>
-                `);
-            }
-            
-            if (lowStock.length > 0) {
-                insights.push(`
-                    <div class="mb-2">
-                        <i class="fas fa-exclamation-circle text-yellow-400 mr-2"></i>
-                        <strong class="text-yellow-400">Warning:</strong> ${lowStock.length} item(s) low on stock
-                        ${aiAgentEnabled ? ' - Auto-reorder scheduled' : ''}
-                    </div>
-                `);
-            }
-            
-            // Healthy stock
-            const healthyItems = inventory.filter(item => item.quantity >= LOW_STOCK_THRESHOLD);
-            if (healthyItems.length > 0 && outOfStock.length === 0 && lowStock.length === 0) {
-                insights.push(`
-                    <div class="mb-2">
-                        <i class="fas fa-check-circle text-green-400 mr-2"></i>
-                        <strong class="text-green-400">All Good:</strong> All ${inventory.length} items have healthy stock levels
-                    </div>
-                `);
-            }
-            
-            // Predictive insights
-            const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-            insights.push(`
-                <div class="mb-2">
-                    <i class="fas fa-chart-line text-gray-400 mr-2"></i>
-                    <strong>Total Inventory Value:</strong> ₹${totalValue.toFixed(2)}
-                </div>
-            `);
-            
-            // Top categories
-            const categories = {};
-            inventory.forEach(item => {
-                const cat = item.category || 'uncategorized';
-                categories[cat] = (categories[cat] || 0) + 1;
-            });
-            const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
-            if (topCategory) {
-                insights.push(`
-                    <div class="mb-2">
-                        <i class="fas fa-tags text-gray-400 mr-2"></i>
-                        <strong>Most Stocked Category:</strong> ${topCategory[0]} (${topCategory[1]} items)
-                    </div>
-                `);
-            }
-            
-            insightsEl.innerHTML = insights.join('');
+            // This is now handled by the backend AI agent
+            // Kept for backward compatibility
         }
         
         // Update AI stats
@@ -3545,7 +3658,7 @@
                 if (!orders || orders.length === 0) {
                     logEl.innerHTML = `
                         <div class="text-center text-gray-400 py-8">
-                            <i class="fas fa-info-circle mr-2"></i>No AI activity yet
+                            <i class="fas fa-info-circle mr-2"></i>No AI activity yet. Click "Run Now" to start.
                         </div>
                     `;
                     return;
@@ -3587,8 +3700,8 @@
             } catch (error) {
                 console.error('Error loading AI log:', error);
                 logEl.innerHTML = `
-                    <div class="text-center text-red-400 py-8">
-                        Failed to load activity log
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-info-circle mr-2"></i>Activity log unavailable
                     </div>
                 `;
             }
@@ -3596,7 +3709,7 @@
         
         // Add entry to AI log (for real-time updates)
         function addAILog(message, type = 'info') {
-            console.log(`🤖 AI Agent: ${message}`);
+            console.log(`AI Agent: ${message}`);
             // Reload the activity log to show latest
             loadAIActivityLog();
         }
