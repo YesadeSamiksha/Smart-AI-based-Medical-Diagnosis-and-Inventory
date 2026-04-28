@@ -67,7 +67,7 @@
     <!-- Ballpit Background Canvas -->
     
     
-    <div class="d-flex" style="position: relative; z-index: 10;">
+    <div class="d-flex" id="dashboardContent" style="position: relative; z-index: 10; display: none;">
         <!-- Sidebar -->
         <nav class="sidebar" style="width: 250px;">
             <div class="text-center mb-4">
@@ -231,22 +231,60 @@
         // Initialize and check auth
         document.addEventListener('DOMContentLoaded', async function() {
             window.MedAISupabase.initSupabase();
-            await checkAuth();
+            const authValid = await checkAuth();
+            if (!authValid) return; // Stop loading if not authenticated
             await loadFullHistory();
             await loadTrends();
         });
         
-        // Check if user is logged in
+        // Check if user is logged in — validates with server, not just cached session
         async function checkAuth() {
-            const isAuth = await window.MedAIAuth.checkAuthState();
-            if (!isAuth) {
+            try {
+                const supabase = window.MedAISupabase.getSupabase();
+                if (!supabase) {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+
+                // Use getUser() instead of getSession() — this makes a server roundtrip
+                // to verify the token is actually valid, not just cached
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error || !user) {
+                    // Session is invalid/expired — clean up stale data
+                    localStorage.removeItem('medai_user');
+                    localStorage.removeItem('medai_admin_token');
+                    // Clear Supabase's own cached session
+                    try { await supabase.auth.signOut(); } catch(e) {}
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                // Also verify we have a valid medai_user entry
+                const storedUser = JSON.parse(localStorage.getItem('medai_user') || '{}');
+                if (!storedUser.loggedIn || storedUser.id !== user.id) {
+                    // Stored user doesn't match — rebuild it
+                    const profile = await window.MedAIAuth.getProfile(user.id);
+                    localStorage.setItem('medai_user', JSON.stringify({
+                        id: user.id,
+                        email: user.email,
+                        name: profile?.full_name || user.email,
+                        role: profile?.role || 'user',
+                        loggedIn: true
+                    }));
+                }
+                
+                // Load user data
+                const currentUser = JSON.parse(localStorage.getItem('medai_user') || '{}');
+                document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'User';
+                // Show dashboard content now that auth is verified
+                document.getElementById('dashboardContent').style.display = 'flex';
+                return true;
+            } catch (err) {
+                console.error('Auth check failed:', err);
                 window.location.href = 'login.html';
-                return;
+                return false;
             }
-            
-            // Load user data
-            const user = JSON.parse(localStorage.getItem('medai_user') || '{}');
-            document.getElementById('userName').textContent = user.name || user.email || 'User';
         }
         
         // Get current user ID
@@ -506,9 +544,24 @@
         }
         
         async function logout() {
-            await window.MedAIAuth.signOut();
+            try {
+                await window.MedAIAuth.signOut();
+            } catch(e) {
+                console.warn('Sign out API call failed, clearing local data anyway');
+            }
+            // Clear all MedAI data
+            localStorage.removeItem('medai_user');
             localStorage.removeItem('medai_admin_token');
-            window.location.href = 'index.html';
+            // Clear Supabase's own auth token cache
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('sb-')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            window.location.href = 'login.html';
         }
     </script>
     

@@ -542,7 +542,7 @@ function initializeSmoothScroll() {
 // GEMINI AI INTEGRATION — Fallback for unrecognized queries
 // ========================================================
 
-const GEMINI_API_KEY = 'AIzaSyDAoqNchYK_Md0t4AJa3T8C1ZqpJFyvu8Y';
+const GEMINI_API_KEY = '';
 const GEMINI_MODELS = [
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite'
