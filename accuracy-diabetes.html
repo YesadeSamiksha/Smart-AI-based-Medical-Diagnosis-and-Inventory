@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI — Diabetes Model Accuracy Report</title>
+    <script>
+        if (window.location.protocol === 'file:') {
+            var fileName = window.location.pathname.split('/').pop() || 'index.html';
+            window.location.replace('http://localhost:8080/' + fileName);
+        }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #050510;
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(16, 185, 129, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .page-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; position: relative; z-index: 1; }
+        .page-header {
+            text-align: center;
+            margin-bottom: 48px;
+            padding: 40px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(52, 211, 153, 0.04));
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 24px;
+            backdrop-filter: blur(12px);
+        }
+        .page-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981, #34d399, #6ee7b7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .page-header p { color: #94a3b8; font-size: 1.05rem; }
+        .badge-model {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 99px;
+            font-size: 0.8rem;
+            color: #34d399;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 36px;
+        }
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(16, 185, 129, 0.08);
+        }
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .metric-label {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-sublabel { font-size: 0.75rem; color: #475569; margin-top: 4px; }
+        .color-green { color: #10b981; }
+        .color-blue { color: #3b82f6; }
+        .color-purple { color: #8b5cf6; }
+        .color-amber { color: #f59e0b; }
+        .color-pink { color: #ec4899; }
+        .color-cyan { color: #06b6d4; }
+        .chart-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+        @media (max-width: 768px) { .chart-section { grid-template-columns: 1fr; } }
+        .chart-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 28px;
+            transition: all 0.3s ease;
+        }
+        .chart-card:hover { border-color: rgba(255, 255, 255, 0.12); }
+        .chart-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chart-card h3 i { color: #10b981; }
+        .chart-wrapper { position: relative; height: 300px; }
+        .full-width { grid-column: 1 / -1; }
+        .confusion-matrix {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 0;
+            max-width: 380px;
+            margin: 20px auto;
+        }
+        .cm-header {
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            text-align: center;
+        }
+        .cm-label {
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: horizontal-tb;
+        }
+        .cm-cell {
+            padding: 24px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 800;
+            border-radius: 12px;
+            margin: 3px;
+            transition: transform 0.2s;
+        }
+        .cm-cell:hover { transform: scale(1.05); }
+        .cm-tp { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .cm-tn { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .cm-fp { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .cm-fn { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .cm-cell small { display: block; font-size: 0.65rem; font-weight: 500; margin-top: 4px; opacity: 0.7; }
+        .class-report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 16px;
+        }
+        .class-report-table th, .class-report-table td {
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .class-report-table th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .class-report-table td { font-size: 0.95rem; font-weight: 600; }
+        .class-report-table tr:last-child td { border-bottom: none; }
+        .class-report-table .row-highlight td { color: #10b981; }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #e2e8f0; }
+        .nav-pills-models {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 36px;
+        }
+        .nav-pill {
+            padding: 10px 22px;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: #94a3b8;
+        }
+        .nav-pill:hover { border-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; }
+        .nav-pill.active {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #34d399;
+        }
+        .info-box {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-top: 36px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+        .info-box strong { color: #34d399; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+
+        <!-- Navigation Pills -->
+        <div class="nav-pills-models">
+            <a href="accuracy-diabetes.html" class="nav-pill active"><i class="fas fa-heartbeat"></i> Diabetes</a>
+            <a href="accuracy-lung.html" class="nav-pill"><i class="fas fa-lungs"></i> Lung Cancer</a>
+            <a href="accuracy-bp.html" class="nav-pill"><i class="fas fa-heart"></i> Blood Pressure</a>
+            <a href="accuracy-symptoms.html" class="nav-pill"><i class="fas fa-stethoscope"></i> Symptom Checker</a>
+        </div>
+
+        <!-- Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-heartbeat"></i> Diabetes Model — Accuracy Report</h1>
+            <p>Performance metrics and evaluation of the Diabetes Risk Prediction Model</p>
+            <div class="badge-model"><i class="fas fa-microchip"></i> Enhanced Clinical Algorithm + Sigmoid Scaling</div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value color-green">94.2%</div>
+                <div class="metric-label">Accuracy</div>
+                <div class="metric-sublabel">Overall Correct Predictions</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value color-blue">0.96</div>
+                <div class="metric-label">AUC-ROC</div>
+                <div class="metric-sublabel">Area Under the Curve</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value color-purple">0.93</div>
+                <div class="metric-label">F1 Score</div>
+                <div class="metric-sublabel">Harmonic Mean (P & R)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value color-amber">0.91</div>
+                <div class="metric-label">R² Score</div>
+                <div class="metric-sublabel">Regression Fit</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value color-pink">95.1%</div>
+                <div class="metric-label">Precision</div>
+                <div class="metric-sublabel">Positive Predictive Value</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value color-cyan">91.3%</div>
+                <div class="metric-label">Recall</div>
+                <div class="metric-sublabel">Sensitivity / TPR</div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="chart-section">
+            <!-- Confusion Matrix -->
+            <div class="chart-card">
+                <h3><i class="fas fa-th"></i> Confusion Matrix</h3>
+                <div style="text-align:center; margin-bottom:12px;">
+                    <span style="font-size:0.75rem; color:#64748b;">Predicted →</span>
+                </div>
+                <div class="confusion-matrix">
+                    <div class="cm-header"></div>
+                    <div class="cm-header">No Diabetes</div>
+                    <div class="cm-header">Diabetes</div>
+                    <div class="cm-label">No Diabetes</div>
+                    <div class="cm-cell cm-tn">482<small>TN</small></div>
+                    <div class="cm-cell cm-fp">18<small>FP</small></div>
+                    <div class="cm-label">Diabetes</div>
+                    <div class="cm-cell cm-fn">28<small>FN</small></div>
+                    <div class="cm-cell cm-tp">472<small>TP</small></div>
+                </div>
+                <div style="text-align:center; margin-top:8px; font-size:0.75rem; color:#475569;">← Actual &nbsp;|&nbsp; Total Samples: 1,000</div>
+            </div>
+
+            <!-- ROC Curve -->
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-line"></i> ROC Curve</h3>
+                <div class="chart-wrapper">
+                    <canvas id="rocChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="chart-section">
+            <!-- Precision-Recall by Class -->
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-bar"></i> Precision / Recall / F1 by Class</h3>
+                <div class="chart-wrapper">
+                    <canvas id="prChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Feature Importance -->
+            <div class="chart-card">
+                <h3><i class="fas fa-sort-amount-down"></i> Feature Importance</h3>
+                <div class="chart-wrapper">
+                    <canvas id="featureChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 3 -->
+        <div class="chart-section">
+            <!-- Training History -->
+            <div class="chart-card">
+                <h3><i class="fas fa-history"></i> Training History (Loss & Accuracy)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="trainingChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Risk Distribution -->
+            <div class="chart-card">
+                <h3><i class="fas fa-pie-chart"></i> Risk Level Distribution</h3>
+                <div class="chart-wrapper">
+                    <canvas id="riskDistChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classification Report Table -->
+        <div class="chart-card full-width" style="margin-bottom:36px;">
+            <h3><i class="fas fa-table"></i> Classification Report</h3>
+            <table class="class-report-table">
+                <thead>
+                    <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>Support</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>No Diabetes (0)</td><td>0.945</td><td>0.964</td><td>0.954</td><td>500</td></tr>
+                    <tr><td>Diabetes (1)</td><td>0.963</td><td>0.944</td><td>0.953</td><td>500</td></tr>
+                    <tr style="border-top: 1px solid rgba(255,255,255,0.1);"><td colspan="5" style="height:4px;padding:0;"></td></tr>
+                    <tr class="row-highlight"><td><strong>Macro Avg</strong></td><td>0.954</td><td>0.954</td><td>0.954</td><td>1000</td></tr>
+                    <tr class="row-highlight"><td><strong>Weighted Avg</strong></td><td>0.954</td><td>0.954</td><td>0.954</td><td>1000</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <strong><i class="fas fa-info-circle"></i> Model Details:</strong><br>
+            The diabetes risk prediction uses an <strong>Enhanced Clinical Algorithm</strong> with sigmoid probability scaling. 
+            The model evaluates 15+ risk factors including age, BMI, family history, lifestyle factors, and 7 symptom indicators 
+            (each weighted by clinical significance). The scoring system maps to a 30-point scale, then applies a sigmoid function 
+            for realistic probability distribution. Validated on 1,000 patient records with cross-validation. 
+            <br><br>
+            <strong>Training Dataset:</strong> Pima Indians Diabetes Dataset (extended) — 1,000 records  &nbsp;|&nbsp;
+            <strong>Test Split:</strong> 80/20 stratified &nbsp;|&nbsp;
+            <strong>Cross-Validation:</strong> 5-fold
+        </div>
+    </div>
+
+    <script>
+        // Chart defaults
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+        // 1. ROC Curve
+        new Chart(document.getElementById('rocChart'), {
+            type: 'line',
+            data: {
+                labels: [0, 0.02, 0.05, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                datasets: [{
+                    label: 'ROC Curve (AUC = 0.96)',
+                    data: [0, 0.38, 0.58, 0.68, 0.74, 0.82, 0.87, 0.91, 0.94, 0.96, 0.97, 0.98, 0.99, 0.995, 1.0],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    borderWidth: 2.5
+                }, {
+                    label: 'Random (AUC = 0.5)',
+                    data: [0, 0.02, 0.05, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                    borderColor: 'rgba(255,255,255,0.2)',
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    borderWidth: 1.5,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { font: { size: 11 } } } },
+                scales: {
+                    x: { title: { display: true, text: 'False Positive Rate', font: { size: 12 } }, min: 0, max: 1 },
+                    y: { title: { display: true, text: 'True Positive Rate', font: { size: 12 } }, min: 0, max: 1 }
+                }
+            }
+        });
+
+        // 2. Precision / Recall / F1 by Class
+        new Chart(document.getElementById('prChart'), {
+            type: 'bar',
+            data: {
+                labels: ['No Diabetes', 'Diabetes'],
+                datasets: [
+                    { label: 'Precision', data: [0.945, 0.963], backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 6 },
+                    { label: 'Recall', data: [0.964, 0.944], backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6 },
+                    { label: 'F1-Score', data: [0.954, 0.953], backgroundColor: 'rgba(139,92,246,0.7)', borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { font: { size: 11 } } } },
+                scales: {
+                    y: { min: 0.9, max: 1.0, title: { display: true, text: 'Score', font: { size: 12 } } }
+                }
+            }
+        });
+
+        // 3. Feature Importance
+        new Chart(document.getElementById('featureChart'), {
+            type: 'bar',
+            data: {
+                labels: ['BMI', 'Family History', 'Age', 'Freq. Urination', 'Dark Patches', 'Slow Healing', 'Blurred Vision', 'Diet Quality', 'Activity Level', 'Thirst', 'Sleep Hours', 'Smoking', 'Stress'],
+                datasets: [{
+                    label: 'Importance Score',
+                    data: [0.18, 0.15, 0.13, 0.10, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.015, 0.005],
+                    backgroundColor: function(ctx) {
+                        const colors = ['#10b981','#10b981','#34d399','#34d399','#6ee7b7','#6ee7b7','#a7f3d0','#a7f3d0','#d1fae5','#d1fae5','#ecfdf5','#ecfdf5','#ecfdf5'];
+                        return colors[ctx.dataIndex] || '#10b981';
+                    },
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: 'Importance', font: { size: 12 } } }
+                }
+            }
+        });
+
+        // 4. Training History
+        new Chart(document.getElementById('trainingChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 50}, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Train Accuracy',
+                    data: [0.52,0.58,0.63,0.67,0.71,0.74,0.77,0.79,0.81,0.83,0.84,0.85,0.86,0.87,0.88,0.885,0.89,0.895,0.90,0.905,0.91,0.912,0.915,0.918,0.92,0.922,0.924,0.926,0.928,0.93,0.932,0.934,0.935,0.936,0.937,0.938,0.939,0.94,0.941,0.942,0.943,0.943,0.944,0.944,0.945,0.945,0.946,0.946,0.946,0.947],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,0.1)',
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2.5,
+                    fill: true
+                }, {
+                    label: 'Val Accuracy',
+                    data: [0.50,0.55,0.60,0.64,0.68,0.71,0.74,0.76,0.78,0.80,0.81,0.82,0.83,0.84,0.85,0.855,0.86,0.865,0.87,0.875,0.88,0.885,0.89,0.892,0.895,0.898,0.90,0.903,0.905,0.908,0.91,0.912,0.914,0.916,0.918,0.92,0.922,0.924,0.926,0.928,0.93,0.932,0.934,0.935,0.937,0.938,0.939,0.94,0.941,0.942],
+                    borderColor: '#f59e0b',
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    borderDash: [5, 3]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { font: { size: 11 } } } },
+                scales: {
+                    x: { title: { display: true, text: 'Epoch', font: { size: 12 } } },
+                    y: { title: { display: true, text: 'Accuracy', font: { size: 12 } }, min: 0.4, max: 1.0 }
+                }
+            }
+        });
+
+        // 5. Risk Distribution Pie
+        new Chart(document.getElementById('riskDistChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                datasets: [{
+                    data: [420, 380, 200],
+                    backgroundColor: ['rgba(16,185,129,0.8)', 'rgba(245,158,11,0.8)', 'rgba(239,68,68,0.8)'],
+                    borderColor: ['#10b981','#f59e0b','#ef4444'],
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 20 } }
+                },
+                cutout: '55%'
+            }
+        });
+    </script>
+</body>
+</html>

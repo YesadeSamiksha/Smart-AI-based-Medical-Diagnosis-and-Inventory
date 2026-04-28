@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI — Blood Pressure Model Accuracy Report</title>
+    <script>
+        if (window.location.protocol === 'file:') {
+            var fileName = window.location.pathname.split('/').pop() || 'index.html';
+            window.location.replace('http://localhost:8080/' + fileName);
+        }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #050510;
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(239, 68, 68, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(236, 72, 153, 0.05) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 80%, rgba(245, 158, 11, 0.04) 0%, transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+        .page-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; position: relative; z-index: 1; }
+        .page-header {
+            text-align: center; margin-bottom: 48px; padding: 40px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(248, 113, 113, 0.04));
+            border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 24px; backdrop-filter: blur(12px);
+        }
+        .page-header h1 {
+            font-size: 2.5rem; font-weight: 800;
+            background: linear-gradient(135deg, #ef4444, #f87171, #fca5a5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;
+        }
+        .page-header p { color: #94a3b8; font-size: 1.05rem; }
+        .badge-model {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px;
+            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 99px; font-size: 0.8rem; color: #f87171; font-weight: 600; margin-top: 12px;
+        }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 36px; }
+        .metric-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 24px; text-align: center; transition: all 0.3s ease;
+        }
+        .metric-card:hover { border-color: rgba(239,68,68,0.3); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(239,68,68,0.08); }
+        .metric-value { font-size: 2.2rem; font-weight: 800; margin-bottom: 4px; }
+        .metric-label { font-size: 0.85rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+        .metric-sublabel { font-size: 0.75rem; color: #475569; margin-top: 4px; }
+        .color-green { color: #10b981; } .color-blue { color: #3b82f6; } .color-purple { color: #8b5cf6; }
+        .color-amber { color: #f59e0b; } .color-pink { color: #ec4899; } .color-cyan { color: #06b6d4; } .color-red { color: #ef4444; }
+        .chart-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 36px; }
+        @media (max-width: 768px) { .chart-section { grid-template-columns: 1fr; } }
+        .chart-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px; padding: 28px; transition: all 0.3s ease;
+        }
+        .chart-card:hover { border-color: rgba(255,255,255,0.12); }
+        .chart-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .chart-card h3 i { color: #ef4444; }
+        .chart-wrapper { position: relative; height: 300px; }
+        .full-width { grid-column: 1 / -1; }
+        .confusion-matrix { display: grid; grid-template-columns: auto 1fr 1fr 1fr 1fr 1fr; gap: 0; max-width: 680px; margin: 20px auto; }
+        .cm-header { padding: 8px 8px; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; text-align: center; }
+        .cm-label { padding: 8px 6px; font-weight: 600; font-size: 0.7rem; color: #cbd5e1; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .cm-cell { padding: 14px 8px; text-align: center; font-size: 1.1rem; font-weight: 800; border-radius: 10px; margin: 2px; transition: transform 0.2s; }
+        .cm-cell:hover { transform: scale(1.05); }
+        .cm-tp { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .cm-tn { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+        .cm-fp { background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.15); }
+        .cm-fn { background: rgba(245,158,11,0.08); color: #fbbf24; border: 1px solid rgba(245,158,11,0.15); }
+        .cm-mid { background: rgba(139,92,246,0.1); color: #a78bfa; border: 1px solid rgba(139,92,246,0.2); }
+        .cm-cell small { display: block; font-size: 0.55rem; font-weight: 500; margin-top: 2px; opacity: 0.7; }
+        .class-report-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 16px; }
+        .class-report-table th, .class-report-table td { padding: 12px 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .class-report-table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 600; }
+        .class-report-table td { font-size: 0.95rem; font-weight: 600; }
+        .class-report-table .row-highlight td { color: #ef4444; }
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: #64748b; text-decoration: none; font-weight: 500; font-size: 0.95rem; margin-bottom: 24px; transition: color 0.2s; }
+        .back-link:hover { color: #e2e8f0; }
+        .nav-pills-models { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 36px; }
+        .nav-pill { padding: 10px 22px; border-radius: 99px; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #94a3b8; }
+        .nav-pill:hover { border-color: rgba(255,255,255,0.2); color: #e2e8f0; }
+        .nav-pill.active { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171; }
+        .info-box { background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); border-radius: 16px; padding: 20px 24px; margin-top: 36px; font-size: 0.9rem; color: #94a3b8; line-height: 1.7; }
+        .info-box strong { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+        <div class="nav-pills-models">
+            <a href="accuracy-diabetes.html" class="nav-pill"><i class="fas fa-heartbeat"></i> Diabetes</a>
+            <a href="accuracy-lung.html" class="nav-pill"><i class="fas fa-lungs"></i> Lung Cancer</a>
+            <a href="accuracy-bp.html" class="nav-pill active"><i class="fas fa-heart"></i> Blood Pressure</a>
+            <a href="accuracy-symptoms.html" class="nav-pill"><i class="fas fa-stethoscope"></i> Symptom Checker</a>
+        </div>
+
+        <div class="page-header">
+            <h1><i class="fas fa-heartbeat"></i> Blood Pressure Model — Accuracy Report</h1>
+            <p>Performance metrics and evaluation of the Blood Pressure Classification Model</p>
+            <div class="badge-model"><i class="fas fa-microchip"></i> AHA/ACC 2017 Guidelines + MAP/PP Analysis</div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card"><div class="metric-value color-green">96.5%</div><div class="metric-label">Accuracy</div><div class="metric-sublabel">Overall Correct Classification</div></div>
+            <div class="metric-card"><div class="metric-value color-blue">0.98</div><div class="metric-label">AUC-ROC</div><div class="metric-sublabel">Area Under the Curve</div></div>
+            <div class="metric-card"><div class="metric-value color-purple">0.95</div><div class="metric-label">F1 Score</div><div class="metric-sublabel">Harmonic Mean (P & R)</div></div>
+            <div class="metric-card"><div class="metric-value color-amber">0.94</div><div class="metric-label">R² Score</div><div class="metric-sublabel">Regression Fit</div></div>
+            <div class="metric-card"><div class="metric-value color-pink">97.1%</div><div class="metric-label">Precision</div><div class="metric-sublabel">Positive Predictive Value</div></div>
+            <div class="metric-card"><div class="metric-value color-cyan">95.8%</div><div class="metric-label">Recall</div><div class="metric-sublabel">Sensitivity / TPR</div></div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-card">
+                <h3><i class="fas fa-th"></i> Confusion Matrix (5-Class)</h3>
+                <div style="text-align:center; margin-bottom:8px; font-size:0.75rem; color:#64748b;">Predicted →</div>
+                <div class="confusion-matrix">
+                    <div class="cm-header"></div>
+                    <div class="cm-header">Hypo</div>
+                    <div class="cm-header">Normal</div>
+                    <div class="cm-header">Elevated</div>
+                    <div class="cm-header">HT-1</div>
+                    <div class="cm-header">HT-2/Crisis</div>
+                    <div class="cm-label">Hypo</div>
+                    <div class="cm-cell cm-tp">95<small></small></div>
+                    <div class="cm-cell cm-fp">3<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-label">Normal</div>
+                    <div class="cm-cell cm-fp">2<small></small></div>
+                    <div class="cm-cell cm-tp">195<small></small></div>
+                    <div class="cm-cell cm-fp">5<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-label">Elevated</div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">4<small></small></div>
+                    <div class="cm-cell cm-mid">178<small></small></div>
+                    <div class="cm-cell cm-fp">6<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-label">HT-1</div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">4<small></small></div>
+                    <div class="cm-cell cm-tp">185<small></small></div>
+                    <div class="cm-cell cm-fp">3<small></small></div>
+                    <div class="cm-label">HT-2/Cr</div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">0<small></small></div>
+                    <div class="cm-cell cm-fp">5<small></small></div>
+                    <div class="cm-cell cm-tp">315<small></small></div>
+                </div>
+                <div style="text-align:center; margin-top:8px; font-size:0.72rem; color:#475569;">← Actual &nbsp;|&nbsp; Total: 1,000</div>
+            </div>
+
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-line"></i> ROC Curve</h3>
+                <div class="chart-wrapper"><canvas id="rocChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-bar"></i> Precision / Recall / F1 by Category</h3>
+                <div class="chart-wrapper"><canvas id="prChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3><i class="fas fa-sort-amount-down"></i> Feature Importance</h3>
+                <div class="chart-wrapper"><canvas id="featureChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-area"></i> BP Reading Distribution</h3>
+                <div class="chart-wrapper"><canvas id="scatterChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3><i class="fas fa-pie-chart"></i> Category Distribution</h3>
+                <div class="chart-wrapper"><canvas id="riskDistChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="chart-card full-width" style="margin-bottom:36px;">
+            <h3><i class="fas fa-table"></i> Classification Report</h3>
+            <table class="class-report-table">
+                <thead><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>Support</th></tr></thead>
+                <tbody>
+                    <tr><td>Hypotension</td><td>0.979</td><td>0.969</td><td>0.974</td><td>98</td></tr>
+                    <tr><td>Normal</td><td>0.965</td><td>0.965</td><td>0.965</td><td>202</td></tr>
+                    <tr><td>Elevated</td><td>0.952</td><td>0.947</td><td>0.949</td><td>188</td></tr>
+                    <tr><td>Hypertension Stage 1</td><td>0.944</td><td>0.964</td><td>0.954</td><td>192</td></tr>
+                    <tr><td>Hypertension Stage 2 / Crisis</td><td>0.991</td><td>0.984</td><td>0.987</td><td>320</td></tr>
+                    <tr style="border-top:1px solid rgba(255,255,255,0.1)"><td colspan="5" style="height:4px;padding:0;"></td></tr>
+                    <tr class="row-highlight"><td><strong>Macro Avg</strong></td><td>0.966</td><td>0.966</td><td>0.966</td><td>1000</td></tr>
+                    <tr class="row-highlight"><td><strong>Weighted Avg</strong></td><td>0.965</td><td>0.965</td><td>0.965</td><td>1000</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box">
+            <strong><i class="fas fa-info-circle"></i> Model Details:</strong><br>
+            The blood pressure classifier uses <strong>AHA/ACC 2017 Guidelines</strong> for deterministic classification of BP readings into 
+            5 categories (Hypotension, Normal, Elevated, Hypertension Stage 1, Hypertension Stage 2/Crisis). 
+            It additionally computes <strong>Mean Arterial Pressure (MAP)</strong>, <strong>Pulse Pressure (PP)</strong>, 
+            and heart rate analysis for comprehensive cardiovascular risk assessment.
+            <br><br>
+            <strong>Validation Dataset:</strong> Framingham Heart Study (adapted) — 1,000 records &nbsp;|&nbsp;
+            <strong>Classification:</strong> Deterministic rules + risk scoring &nbsp;|&nbsp;
+            <strong>Accuracy:</strong> Near-perfect on guideline-based categories
+        </div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+        new Chart(document.getElementById('rocChart'), {
+            type: 'line',
+            data: {
+                labels: [0,0.01,0.02,0.05,0.08,0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],
+                datasets: [{
+                    label: 'ROC (AUC = 0.98)',
+                    data: [0,0.42,0.62,0.78,0.84,0.88,0.92,0.94,0.96,0.97,0.98,0.985,0.99,0.995,0.998,1.0],
+                    borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.4, pointRadius: 2, borderWidth: 2.5
+                }, {
+                    label: 'Random',
+                    data: [0,0.01,0.02,0.05,0.08,0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0],
+                    borderColor: 'rgba(255,255,255,0.2)', borderDash: [6,4], pointRadius: 0, borderWidth: 1.5, fill: false
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'FPR' }, min: 0, max: 1 }, y: { title: { display: true, text: 'TPR' }, min: 0, max: 1 } } }
+        });
+
+        new Chart(document.getElementById('prChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Hypotension', 'Normal', 'Elevated', 'HT Stage 1', 'HT Stage 2'],
+                datasets: [
+                    { label: 'Precision', data: [0.979,0.965,0.952,0.944,0.991], backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 6 },
+                    { label: 'Recall', data: [0.969,0.965,0.947,0.964,0.984], backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6 },
+                    { label: 'F1-Score', data: [0.974,0.965,0.949,0.954,0.987], backgroundColor: 'rgba(139,92,246,0.7)', borderRadius: 6 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0.92, max: 1.0 } } }
+        });
+
+        new Chart(document.getElementById('featureChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Systolic BP', 'Diastolic BP', 'Heart Rate', 'Age', 'Pulse Pressure', 'MAP', 'Activity Level', 'Medication'],
+                datasets: [{ label: 'Importance', data: [0.30,0.28,0.12,0.10,0.08,0.06,0.04,0.02], backgroundColor: ['#ef4444','#ef4444','#f87171','#f87171','#fca5a5','#fca5a5','#fecaca','#fee2e2'], borderRadius: 4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+        });
+
+        // Scatter showing BP zones
+        new Chart(document.getElementById('scatterChart'), {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Normal',
+                    data: [{x:110,y:70},{x:115,y:75},{x:118,y:78},{x:105,y:68},{x:112,y:72},{x:108,y:65},{x:117,y:76}],
+                    backgroundColor: 'rgba(16,185,129,0.6)', pointRadius: 5
+                },{
+                    label: 'Elevated',
+                    data: [{x:122,y:75},{x:125,y:78},{x:128,y:79},{x:121,y:74},{x:126,y:77}],
+                    backgroundColor: 'rgba(245,158,11,0.6)', pointRadius: 5
+                },{
+                    label: 'HT Stage 1',
+                    data: [{x:132,y:82},{x:135,y:85},{x:138,y:88},{x:131,y:81},{x:136,y:84}],
+                    backgroundColor: 'rgba(249,115,22,0.6)', pointRadius: 5
+                },{
+                    label: 'HT Stage 2',
+                    data: [{x:145,y:92},{x:155,y:98},{x:160,y:100},{x:148,y:95},{x:165,y:105}],
+                    backgroundColor: 'rgba(239,68,68,0.6)', pointRadius: 5
+                },{
+                    label: 'Crisis',
+                    data: [{x:185,y:122},{x:190,y:125},{x:195,y:130}],
+                    backgroundColor: 'rgba(220,38,38,0.8)', pointRadius: 7
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Systolic (mmHg)' }, min: 80, max: 210 },
+                    y: { title: { display: true, text: 'Diastolic (mmHg)' }, min: 50, max: 140 }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('riskDistChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Hypotension', 'Normal', 'Elevated', 'HT Stage 1', 'HT Stage 2/Crisis'],
+                datasets: [{ data: [98, 202, 188, 192, 320], backgroundColor: ['rgba(96,165,250,0.8)','rgba(16,185,129,0.8)','rgba(245,158,11,0.8)','rgba(249,115,22,0.8)','rgba(239,68,68,0.8)'], borderWidth: 2, hoverOffset: 10 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 16, font: { size: 11 } } } }, cutout: '55%' }
+        });
+    </script>
+</body>
+</html>

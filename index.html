@@ -690,43 +690,105 @@
                         <span>Use Voice Control</span>
                     </button>
                 </div>
-                <div class="mt-12 flex gap-8 justify-center flex-wrap text-gray-500" style="pointer-events: auto;">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-eye-slash text-gray-400"></i>
-                        <span>Color Blind Support</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-route text-gray-400"></i>
-                        <span>Voice Navigation</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-robot text-gray-400"></i>
-                        <span>AI Assistant</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-palette text-gray-400"></i>
-                        <span>Color Identification</span>
-                    </div>
-                </div>
+               
             </div>
         </div>
     </section>
 
     <!-- Floating Action Buttons -->
     <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-3">
-        <button id="voice-assistant-btn" class="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg">
+        <button id="voice-assistant-btn" class="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg transition-all duration-300" title="Voice Command">
             <i class="fas fa-microphone-alt text-2xl"></i>
         </button>
-        <button id="ai-assistant-btn" class="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg">
+        <button id="ai-assistant-btn" class="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg transition-all duration-300" title="AI Chatbot">
             <i class="fas fa-robot text-2xl"></i>
         </button>
     </div>
 
-    <!-- AI Assistant Chat Window -->
-    <div id="ai-chat-window" class="fixed bottom-20 right-4 z-50 w-80 bg-gray-800/80 backdrop-blur-md rounded-lg shadow-xl text-white p-4 hidden">
-        <div id="ai-chat-messages" class="h-64 overflow-y-auto mb-3"></div>
-        <p id="ai-chat-status" class="text-sm text-gray-400">Listening...</p>
+    <!-- Voice Listening Overlay -->
+    <div id="voice-overlay" class="fixed inset-0 z-[999] items-center justify-center hidden" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);">
+        <div class="text-center text-white">
+            <div id="voice-pulse" style="width:120px;height:120px;border-radius:50%;background:rgba(74,222,128,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;animation:voicePulse 1.5s ease-in-out infinite;">
+                <i class="fas fa-microphone text-5xl text-emerald-400"></i>
+            </div>
+            <p class="text-xl font-semibold mb-1">Listening...</p>
+            <p id="voice-transcript-live" class="text-gray-400 text-sm mb-4" style="min-height:1.5rem;"></p>
+            <button id="voice-cancel-btn" class="px-5 py-2 rounded-full bg-red-500/80 hover:bg-red-600 text-white text-sm font-medium transition-colors">Cancel</button>
+        </div>
     </div>
+
+    <!-- AI Assistant Chat Window -->
+    <div id="ai-chat-window" class="fixed bottom-20 right-4 z-50 hidden" style="width:380px; max-width:calc(100vw - 2rem);">
+        <div style="background:rgba(15,15,25,0.92); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.1); border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05); overflow:hidden;">
+            <!-- Chat Header -->
+            <div style="padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; background:rgba(74,222,128,0.05);">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4ade80,#16a34a);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div>
+                        <div class="text-white font-semibold text-sm">MedAI Assistant</div>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;"></span>
+                            <span class="text-gray-400" style="font-size:11px;">Online</span>
+                        </div>
+                    </div>
+                </div>
+                <button id="ai-chat-close" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.5)'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- Chat Messages -->
+            <div id="ai-chat-messages" style="height:320px; overflow-y:auto; padding:1rem 1.25rem; scroll-behavior:smooth;"></div>
+            <!-- Chat Status -->
+            <p id="ai-chat-status" class="text-gray-500 hidden" style="font-size:11px; padding:0 1.25rem; margin:0;"></p>
+            <!-- Chat Input -->
+            <div style="padding:0.75rem 1rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:0.5rem;">
+                <button id="chat-voice-btn" style="width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);cursor:pointer;flex-shrink:0;transition:all 0.2s;" title="Voice input">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <input id="ai-chat-input" type="text" placeholder="Ask me anything about health..." style="flex:1;border:none;background:rgba(255,255,255,0.06);color:#fff;padding:0.6rem 1rem;border-radius:12px;font-size:13px;outline:none;transition:background 0.2s;" onfocus="this.style.background='rgba(255,255,255,0.1)'" onblur="this.style.background='rgba(255,255,255,0.06)'" autocomplete="off">
+                <button id="ai-chat-send" style="width:38px;height:38px;border-radius:50%;border:none;background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" title="Send message">
+                    <i class="fas fa-paper-plane" style="font-size:13px;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+            50% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(74,222,128,0); }
+        }
+        #ai-chat-messages::-webkit-scrollbar { width: 4px; }
+        #ai-chat-messages::-webkit-scrollbar-track { background: transparent; }
+        #ai-chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .chat-msg-appear { animation: chatMsgIn 0.3s ease-out; }
+        @keyframes chatMsgIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .typing-dots span {
+            display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4);
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .voice-btn-active {
+            background: rgba(239,68,68,0.2) !important;
+            color: #ef4444 !important;
+            animation: voiceBtnPulse 1s ease-in-out infinite;
+        }
+        @keyframes voiceBtnPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+        }
+    </style>
 
     <!-- Features Section -->
     <section id="features" class="py-5" style="background: #0f0f14;">
